@@ -5,7 +5,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Search, ShieldCheck } from "lucide-react";
+import { Search, ShieldCheck, Star, Heart } from "lucide-react";
+import { siGithub } from "simple-icons";
 import { auth, setToken, dispatchAuthEvent, request as api } from "../lib/api";
 import { useSearchProviders } from "../hooks/use-provider";
 import SearchProviderPicker from "../components/SearchProviderPicker";
@@ -163,7 +164,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[75vh] gap-10 px-4">
+    <div className="relative flex flex-col items-center justify-center min-h-[75vh] gap-10 px-4">
       {/* ──── Title ──── */}
       <div className="text-center select-none">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight bg-linear-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
@@ -215,6 +216,29 @@ export default function Home() {
           </div>
         </Field>
       </div>
+
+      {/* ──── GitHub 指引 ──── */}
+      <a
+        href="https://github.com/deepwn/cloudMirror"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors z-50"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width={14}
+          height={14}
+          className="shrink-0"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <path d={siGithub.path} fill="currentColor" />
+        </svg>
+        <span>Star it!</span>
+        <Star size={12} className="shrink-0 fill-current text-yellow-500" />
+        <span>And deploy it!</span>
+        <Heart size={12} className="shrink-0 fill-current text-red-500" />
+      </a>
     </div>
   );
 }
