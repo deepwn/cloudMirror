@@ -171,19 +171,18 @@ case path.startsWith("/foo"):
 ```bash
 yarn typecheck          # TS strict
 yarn lint               # oxlint（或直接 oxlint）
-yarn test               # 全量 vitest
-yarn vitest run src/providers   # SDK 专项：baseline + pipeline（33 项）
+yarn test               # 全量 vitest（138 项）
+yarn vitest run src/providers   # SDK 专项：baseline + pipeline + utils（58 项）
 yarn build              # 前端生产构建
 ```
 
 - 新增 Provider 需在 `provider-sdk.baseline.test.ts` 中满足元数据/契约校验，管线行为在 `provider-sdk.pipeline.test.ts`
 - Worker API 测试在 `src/worker/__tests__/api/`，URL 用 `/cloudmirror-api/v1` 前缀
-- 已知既有失败（与功能无关，勿"修复"）：crypto 空密码、auth register invite/open 模式
 
 ## 部署与数据库
 
 ```bash
-yarn deploy          # 构建 + wrangler deploy --env production
+yarn deploy          # 构建 + wrangler deploy
 yarn deploy:dry      # dry-run 预览
 yarn db:reset:local  # 重建本地 D1
 wrangler d1 export cloudmirror-db --remote --output backup.sql   # 备份

@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_users_deleted ON users(deleted_at);
 CREATE TABLE IF NOT EXISTS user_providers (
   id              TEXT PRIMARY KEY,
   user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  provider        TEXT NOT NULL,                   -- 'docker','github','hf','npm','golang','cargo'
+  provider        TEXT NOT NULL,                   -- 对应 registry.ts 注册的 14 个 Provider id
   hash            TEXT NOT NULL UNIQUE,            -- 16 位 hex，独立子域
   enabled         INTEGER NOT NULL DEFAULT 1,
   pat             TEXT DEFAULT NULL,               -- AES-256-GCM 加密
@@ -158,7 +158,7 @@ CREATE INDEX IF NOT EXISTS idx_invite_code ON invite_codes(code);
 CREATE INDEX IF NOT EXISTS idx_invite_expires ON invite_codes(expires_at);
 
 -- ============================================================
--- 默认设置（与 scripts/db-init.ts 种子数据完全一致）
+-- 默认设置（种子数据内联于此；历史 scripts/db-init.ts 已移除）
 -- ============================================================
 INSERT OR IGNORE INTO settings (key, value, description) VALUES
   ('registration_mode', 'invite', '注册模式: open | invite | closed'),

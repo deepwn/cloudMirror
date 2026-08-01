@@ -117,7 +117,7 @@ yarn dev   # 打开 http://localhost:5173
 ### 5. 部署
 
 ```bash
-yarn deploy   # 构建前端 + wrangler deploy --env production
+yarn deploy   # 构建前端 + wrangler deploy
 ```
 
 ### 6. 配置子域（可选）
@@ -190,8 +190,8 @@ manager.register(fooProvider);
 
 ```bash
 yarn typecheck            # TypeScript 类型检查
-yarn test                 # Vitest 全量测试
-yarn vitest run src/providers   # Provider SDK 专项（33 项）
+yarn test                 # Vitest 全量测试（138 项）
+yarn vitest run src/providers   # Provider SDK 专项（58 项）
 yarn build                # 前端生产构建
 ```
 

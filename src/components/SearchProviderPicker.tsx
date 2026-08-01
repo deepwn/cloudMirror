@@ -26,9 +26,9 @@ export default function SearchProviderPicker({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex h-7 items-center gap-1.5 rounded-md px-2 text-sm text-foreground outline-none transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95 data-[popup-open]:bg-muted/70">
+      <DropdownMenuTrigger className="flex h-7 items-center gap-1.5 rounded-md px-2 text-sm text-foreground outline-none transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95 data-popup-open:bg-muted/70">
         <ProviderIcon icon={active.meta.icon} size={15} />
-        <ChevronDown size={14} className="text-muted-foreground transition-transform duration-200 data-[popup-open]:rotate-180" />
+        <ChevronDown size={14} className="text-muted-foreground transition-transform duration-200 data-popup-open:rotate-180" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56">
         <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">

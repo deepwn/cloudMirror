@@ -156,7 +156,7 @@ POST /cloudmirror-api/v1/fetch  { url, headers?, type? }
   → 转发并回 CORS 头
 ```
 
-代码：`src/worker/api/fetch.ts`、`src/providers/manager.ts`
+代码：`src/worker/api/fetch.ts`（`collectProxyUpstreams()` 在模块加载期基于已注册 Provider 计算）
 
 白名单来源（`collectProxyUpstreams()`，注册完成后计算一次并缓存）：
 
@@ -282,7 +282,7 @@ sequenceDiagram
 | render | `provider-sdk.baseline.test.ts` | 契约完整性（itemsPath/detailLink/infoEndpoint/credentialTypes） |
 | e2e | `worker/__tests__/api/*` | auth/credentials 集成（URL 为 `/cloudmirror-api/v1`） |
 
-当前基线：`vitest run src/providers` **39 项全过**；全量 **119 项全过**（lint/typecheck/test/build 均绿）。
+当前基线：`vitest run src/providers` **58 项全过**；全量 **138 项全过**（lint/typecheck/test/build 均绿）。
 
 ---
 
