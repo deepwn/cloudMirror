@@ -6,9 +6,13 @@ import type { Env } from "../providers/types";
 import { makeRes } from "../config";
 import { authenticateWeb } from "../auth";
 import {
-  getUserProviders, enableUserProvider, disableUserProvider,
-  updateUserProviderPat, rotateUserProviderHash,
-  upsertProviderSetting, getAllProviderSettings,
+  getUserProviders,
+  enableUserProvider,
+  disableUserProvider,
+  updateUserProviderPat,
+  rotateUserProviderHash,
+  upsertProviderSetting,
+  getAllProviderSettings,
 } from "../db";
 import { encryptSecret } from "../crypto";
 
@@ -47,7 +51,7 @@ export async function handleProviderRoute(
     }
     if (request.method === "PUT") {
       try {
-        const body = await request.json() as {
+        const body = (await request.json()) as {
           provider: string;
           enabled: number;
           fallback_pat?: string;
@@ -58,7 +62,13 @@ export async function handleProviderRoute(
           if (s.fallback_pat && env.ENCRYPTION_KEY) {
             encryptedPat = await encryptSecret(s.fallback_pat, env.ENCRYPTION_KEY);
           }
-          await upsertProviderSetting(env.DB, s.provider, s.enabled, encryptedPat, s.rate_limit ?? null);
+          await upsertProviderSetting(
+            env.DB,
+            s.provider,
+            s.enabled,
+            encryptedPat,
+            s.rate_limit ?? null,
+          );
         }
         return makeRes(JSON.stringify({ success: true }));
       } catch {
@@ -88,12 +98,18 @@ export async function handleProviderRoute(
 
   if (request.method === "PUT" && parts[0] && parts[1] === "pat") {
     try {
-      const body = await request.json() as { pat?: string; patUsername?: string };
+      const body = (await request.json()) as { pat?: string; patUsername?: string };
       let encryptedPat: string | null = null;
       if (body.pat && env.ENCRYPTION_KEY) {
         encryptedPat = await encryptSecret(body.pat, env.ENCRYPTION_KEY);
       }
-      await updateUserProviderPat(env.DB, user.id, parts[0], encryptedPat, body.patUsername ?? null);
+      await updateUserProviderPat(
+        env.DB,
+        user.id,
+        parts[0],
+        encryptedPat,
+        body.patUsername ?? null,
+      );
       return makeRes(JSON.stringify({ success: true }));
     } catch {
       return makeRes(JSON.stringify({ success: false, error: "Invalid body" }), 400);

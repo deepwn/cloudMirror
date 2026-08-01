@@ -12,45 +12,45 @@
 
 ## ✨ 核心能力
 
-| 能力 | 说明 |
-| --- | --- |
-| 🔍 **多源统一搜索** | 所有 Provider 通过 `doSearch()` 驱动，结果卡片 / 详情页统一模板渲染 |
+| 能力                   | 说明                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| 🔍 **多源统一搜索**    | 所有 Provider 通过 `doSearch()` 驱动，结果卡片 / 详情页统一模板渲染                                     |
 | 🔐 **Provider 级凭据** | 每用户每 Provider 独立 `{hash}` 子域 + 独立 PAT（AES-256-GCM 加密），匿名拉取公开资源、凭据突破速率限制 |
-| 👤 **用户体系** | JWT 登录 / 邀请注册 / 管理员面板 / Provider 开关 / 凭据轮换 |
-| 🔌 **Provider SDK v2** | 声明式 `proxy` / `search` 配置 + 分阶段 hooks，新增源仅需 1 个文件 + 1 行注册 |
-| 📄 **自动文档** | DocsManager 从 Provider 声明自动派生端点表 / 搜索 API / 凭据 / 快速连接 |
-| 🛡️ **安全基线** | SSRF 白名单派生校验、hook 异常降级、审计日志、限流、UA/IP 黑名单 |
+| 👤 **用户体系**        | JWT 登录 / 邀请注册 / 管理员面板 / Provider 开关 / 凭据轮换                                             |
+| 🔌 **Provider SDK v2** | 声明式 `proxy` / `search` 配置 + 分阶段 hooks，新增源仅需 1 个文件 + 1 行注册                           |
+| 📄 **自动文档**        | DocsManager 从 Provider 声明自动派生端点表 / 搜索 API / 凭据 / 快速连接                                 |
+| 🛡️ **安全基线**        | SSRF 白名单派生校验、hook 异常降级、审计日志、限流、UA/IP 黑名单                                        |
 
 ## 📦 内置源（14 个）
 
-| 生态 | Provider | 说明 |
-| --- | --- | --- |
-| 🐳 容器 | docker | Docker Hub Token 交换 + OCI 分发 |
-| 🔀 代码 | github | git clone / Raw / Release / LFS |
-| 🧠 AI | hf | Hugging Face 模型 + 数据集双索引 |
-| 📦 Node.js | npm | registry 搜索 / 安装代理 |
-| 🐍 Python | pypi | pip / uv / Poetry |
-| 🦀 Rust | cargo | crates.io + sparse index |
-| 🐹 Go | gomod | GOPROXY |
-| ☕ JVM | maven | Maven Central |
-| 🔷 .NET | nuget | NuGet Gallery |
-| ♦️ Ruby | rubygems | RubyGems |
-| 🐘 PHP | packagist | Composer |
-| 🐪 Perl | cpan | MetaCPAN |
-| 🎯 Dart | dart | pub.dev |
-| 📊 R | cran | CRAN |
+| 生态       | Provider  | 说明                             |
+| ---------- | --------- | -------------------------------- |
+| 🐳 容器    | docker    | Docker Hub Token 交换 + OCI 分发 |
+| 🔀 代码    | github    | git clone / Raw / Release / LFS  |
+| 🧠 AI      | hf        | Hugging Face 模型 + 数据集双索引 |
+| 📦 Node.js | npm       | registry 搜索 / 安装代理         |
+| 🐍 Python  | pypi      | pip / uv / Poetry                |
+| 🦀 Rust    | cargo     | crates.io + sparse index         |
+| 🐹 Go      | gomod     | GOPROXY                          |
+| ☕ JVM     | maven     | Maven Central                    |
+| 🔷 .NET    | nuget     | NuGet Gallery                    |
+| ♦️ Ruby    | rubygems  | RubyGems                         |
+| 🐘 PHP     | packagist | Composer                         |
+| 🐪 Perl    | cpan      | MetaCPAN                         |
+| 🎯 Dart    | dart      | pub.dev                          |
+| 📊 R       | cran      | CRAN                             |
 
 ## 🏗️ 技术栈
 
-| 层 | 技术 |
-| --- | --- |
-| 运行时 | Cloudflare Workers (TypeScript) |
-| 数据库 | Cloudflare D1 (SQLite) |
-| 前端 | React 19 + React Router 7 + Vite |
-| UI | shadcn/ui + Tailwind CSS v4 |
-| 测试 | Vitest + oxlint |
-| 包管理 | Yarn 1.x |
-| 部署 | Wrangler 4.x |
+| 层     | 技术                             |
+| ------ | -------------------------------- |
+| 运行时 | Cloudflare Workers (TypeScript)  |
+| 数据库 | Cloudflare D1 (SQLite)           |
+| 前端   | React 19 + React Router 7 + Vite |
+| UI     | shadcn/ui + Tailwind CSS v4      |
+| 测试   | Vitest + oxlint                  |
+| 包管理 | Yarn 1.x                         |
+| 部署   | Wrangler 4.x                     |
 
 ## 📁 仓库结构
 
@@ -155,7 +155,7 @@ export class FooProvider extends ProviderDefinition {
   readonly id = "foo";
   readonly upstream = "https://foo.example";
   readonly authMode = "none" as const;
-  readonly meta = { /* id/name/icon/description/searchEnabled/... */ };
+  readonly meta = {/* id/name/icon/description/searchEnabled/... */};
 
   // 代理：声明路由表 + hooks（多数源无需覆写 handleProxy）
   readonly proxy = {
@@ -171,10 +171,18 @@ export class FooProvider extends ProviderDefinition {
     offsetParam: "from",
   };
 
-  defineResultMapping() { /* 原始 API → 通用搜索项 */ }
-  defineResultCard()     { /* 卡片渲染配置 */ }
-  defineDetail()         { /* 详情页 info + tabs */ }
-  defineSetupGuide()     { /* 安装配置指南 */ }
+  defineResultMapping() {
+    /* 原始 API → 通用搜索项 */
+  }
+  defineResultCard() {
+    /* 卡片渲染配置 */
+  }
+  defineDetail() {
+    /* 详情页 info + tabs */
+  }
+  defineSetupGuide() {
+    /* 安装配置指南 */
+  }
 }
 ```
 
@@ -197,15 +205,15 @@ yarn build                # 前端生产构建
 
 ## ⌨️ 常用命令
 
-| 命令 | 说明 |
-| --- | --- |
-| `yarn dev` | 本地开发（Vite + workerd） |
-| `yarn db:init:local` / `db:init:remote` | 初始化 D1 数据库 |
-| `yarn db:reset:local` / `db:reset:remote` | 重建 D1 数据库 |
-| `yarn build` | 前端生产构建 |
-| `yarn deploy` | 构建 + 部署 |
-| `yarn typecheck` | 类型检查 |
-| `yarn test` | 全量测试 |
+| 命令                                      | 说明                       |
+| ----------------------------------------- | -------------------------- |
+| `yarn dev`                                | 本地开发（Vite + workerd） |
+| `yarn db:init:local` / `db:init:remote`   | 初始化 D1 数据库           |
+| `yarn db:reset:local` / `db:reset:remote` | 重建 D1 数据库             |
+| `yarn build`                              | 前端生产构建               |
+| `yarn deploy`                             | 构建 + 部署                |
+| `yarn typecheck`                          | 类型检查                   |
+| `yarn test`                               | 全量测试                   |
 
 ## 📚 文档
 

@@ -163,10 +163,14 @@ export default function BackupPanel() {
             />
             <p>
               全量还原适用于灾难恢复场景。执行前请先用{" "}
-              <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded text-[11px]">yarn db:reset:remote</code>
-              {" "}清空现有数据，再执行还原命令。确保{" "}
-              <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded text-[11px]">ENCRYPTION_KEY</code>
-              {" "}与导出时一致。
+              <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded text-[11px]">
+                yarn db:reset:remote
+              </code>{" "}
+              清空现有数据，再执行还原命令。确保{" "}
+              <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded text-[11px]">
+                ENCRYPTION_KEY
+              </code>{" "}
+              与导出时一致。
             </p>
           </div>
         </CardContent>

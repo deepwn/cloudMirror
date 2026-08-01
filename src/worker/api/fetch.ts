@@ -21,7 +21,9 @@ export function collectProxyUpstreams(): string[] {
     try {
       const u = new URL(url);
       if (u.protocol === "https:") hosts.add(u.hostname);
-    } catch { /* invalid url skipped */ }
+    } catch {
+      /* invalid url skipped */
+    }
   };
 
   for (const p of getAllProviders()) {
@@ -37,10 +39,7 @@ export function collectProxyUpstreams(): string[] {
 
 const ALLOWED_HOSTS = collectProxyUpstreams();
 
-export async function handleFetchRoute(
-  request: Request,
-  _env: Env,
-): Promise<Response> {
+export async function handleFetchRoute(request: Request, _env: Env): Promise<Response> {
   if (request.method !== "POST") {
     return makeRes(JSON.stringify({ error: "Method not allowed" }), 405, {
       "Content-Type": "application/json",
@@ -49,7 +48,7 @@ export async function handleFetchRoute(
 
   let body: { url?: string; headers?: Record<string, string>; type?: string };
   try {
-    body = await request.json() as typeof body;
+    body = (await request.json()) as typeof body;
   } catch {
     return makeRes(JSON.stringify({ error: "Invalid JSON body" }), 400, {
       "Content-Type": "application/json",
@@ -84,9 +83,10 @@ export async function handleFetchRoute(
   // 构造请求头
   const fetchHeaders = new Headers();
   fetchHeaders.set("User-Agent", "CloudMirror/4.0");
-  fetchHeaders.set("Accept", body.type === "text"
-    ? "text/plain, text/markdown, text/html"
-    : "application/json");
+  fetchHeaders.set(
+    "Accept",
+    body.type === "text" ? "text/plain, text/markdown, text/html" : "application/json",
+  );
   if (body.headers) {
     for (const [k, v] of Object.entries(body.headers)) {
       fetchHeaders.set(k, v);
@@ -101,7 +101,10 @@ export async function handleFetchRoute(
 
     const responseHeaders = new Headers();
     responseHeaders.set("Access-Control-Allow-Origin", "*");
-    responseHeaders.set("Content-Type", res.headers.get("Content-Type") ?? "application/octet-stream");
+    responseHeaders.set(
+      "Content-Type",
+      res.headers.get("Content-Type") ?? "application/octet-stream",
+    );
 
     const data = body.type === "text" ? await res.text() : await res.text();
     const isJson = !body.type || body.type === "json";

@@ -11,11 +11,7 @@ import { useSearchProviders } from "../hooks/use-provider";
 import SearchProviderPicker from "../components/SearchProviderPicker";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -48,9 +44,7 @@ export default function Home() {
 
   // 过滤可用 Providers（未登录时显示全部）
   const searchProviders =
-    enabledSet === null
-      ? allProviders
-      : allProviders.filter((p) => enabledSet.has(p.id));
+    enabledSet === null ? allProviders : allProviders.filter((p) => enabledSet.has(p.id));
 
   // 如果当前 activeType 不在可用列表，切换到第一个
   useEffect(() => {
@@ -199,7 +193,12 @@ export default function Home() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearch(); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSearch();
+                  }
+                }}
                 placeholder={searchLabel}
                 autoFocus
                 className="h-11 text-base"

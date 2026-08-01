@@ -42,14 +42,22 @@ export default function SearchResults() {
   const provider = useProvider(pendingType || activeType);
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
-  useEffect(() => { setInputValue(q); }, [q]);
+  useEffect(() => {
+    setInputValue(q);
+  }, [q]);
   // URL 变化（分页/外部导航）时同步待提交类型，避免残留过期选择
-  useEffect(() => { setPendingType(activeType); }, [activeType]);
+  useEffect(() => {
+    setPendingType(activeType);
+  }, [activeType]);
 
   useEffect(() => {
     if (!q) return;
     const cached = cacheRef.current.get(cacheKey);
-    if (cached) { setResults(cached.results); setTotal(cached.total); return; }
+    if (cached) {
+      setResults(cached.results);
+      setTotal(cached.total);
+      return;
+    }
 
     setLoading(true);
     api.apiSearch
@@ -93,7 +101,9 @@ export default function SearchResults() {
       {/* ──── 复用首页搜索框 ──── */}
       <div className="w-full max-w-3xl mx-auto">
         <Field>
-          <FieldLabel htmlFor="results-search" className="sr-only">搜索</FieldLabel>
+          <FieldLabel htmlFor="results-search" className="sr-only">
+            搜索
+          </FieldLabel>
           <div className="flex items-center gap-3">
             <InputGroup className="h-11 flex-1 rounded-xl bg-background">
               <InputGroupAddon align="inline-start">
@@ -108,7 +118,12 @@ export default function SearchResults() {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearch(); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSearch();
+                  }
+                }}
                 placeholder={provider?.meta.searchLabel || "继续搜索..."}
                 className="h-11 text-base"
               />
@@ -158,13 +173,20 @@ export default function SearchResults() {
 
           {/* 分页 */}
           {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-1 pt-4 pb-8">
-              <Button variant="ghost" size="icon" disabled={page <= 1} onClick={() => goPage(page - 1)}>
+            <div className="flex items-center justify-center gap-1 pt-4 pb-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={page <= 1}
+                onClick={() => goPage(page - 1)}
+              >
                 <ChevronLeft size={16} />
               </Button>
               {pageRange[0] > 1 && (
                 <>
-                  <Button variant="ghost" size="sm" onClick={() => goPage(1)}>1</Button>
+                  <Button variant="ghost" size="sm" onClick={() => goPage(1)}>
+                    1
+                  </Button>
                   {pageRange[0] > 2 && <Ellipsis size={14} className="text-muted-foreground" />}
                 </>
               )}
@@ -188,14 +210,21 @@ export default function SearchResults() {
                   </Button>
                 </>
               )}
-              <Button variant="ghost" size="icon" disabled={page >= totalPages} onClick={() => goPage(page + 1)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={page >= totalPages}
+                onClick={() => goPage(page + 1)}
+              >
                 <ChevronRight size={16} />
               </Button>
             </div>
           )}
         </>
       ) : (
-        <div className="text-center py-12 text-sm text-muted-foreground">未找到与 "{q}" 相关的结果</div>
+        <div className="text-center py-12 text-sm text-muted-foreground">
+          未找到与 "{q}" 相关的结果
+        </div>
       )}
     </div>
   );

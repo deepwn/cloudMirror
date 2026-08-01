@@ -39,11 +39,7 @@ export async function getCachedAuth(hash: string): Promise<CachedAuth | null> {
 /**
  * 将 hash→PAT 映射写入 Cloudflare Cache API。
  */
-export function setCachedAuth(
-  ctx: ExecutionContext,
-  hash: string,
-  data: CachedAuth,
-): void {
+export function setCachedAuth(ctx: ExecutionContext, hash: string, data: CachedAuth): void {
   const cacheKey = new Request(`https://internal.cloudmirror/auth/${hash}`);
   const res = new Response(JSON.stringify(data), {
     headers: { "Cache-Control": `max-age=${AUTH_CACHE_TTL}` },

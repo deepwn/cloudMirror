@@ -56,12 +56,10 @@ export class CpanProvider extends ProviderDefinition {
     });
     if (!res.ok) return null;
 
-    const data = await res.json() as Record<string, unknown>;
+    const data = (await res.json()) as Record<string, unknown>;
     // MetaCPAN wraps hits in {hits: {total, hits: [{_source: {...}}]}}
-    const hits: unknown[] =
-      (getByPath(data, "hits.hits") as unknown[]) ?? [];
-    const total: number =
-      (getByPath(data, "hits.total") as number) ?? hits.length;
+    const hits: unknown[] = (getByPath(data, "hits.hits") as unknown[]) ?? [];
+    const total: number = (getByPath(data, "hits.total") as number) ?? hits.length;
 
     // 解包 _source
     const results = hits.map((hit: unknown) => {
@@ -176,24 +174,20 @@ export class CpanProvider extends ProviderDefinition {
 
   defineSetupGuide(): SetupGuideConfig {
     return {
-      summary:
-        "配置 CPAN 镜像指向 cloudMirror，加速 Perl 模块安装。",
-      quickCommand:
-        "cpanm Moose --mirror https://{domain}/ --mirror-only",
+      summary: "配置 CPAN 镜像指向 cloudMirror，加速 Perl 模块安装。",
+      quickCommand: "cpanm Moose --mirror https://{domain}/ --mirror-only",
       sections: [
         {
           title: "cpanm (推荐)",
           items: [
             {
               label: "全局配置 PERL_CPANM_OPT",
-              value:
-                'export PERL_CPANM_OPT="--mirror https://{domain}/ --mirror-only"',
+              value: 'export PERL_CPANM_OPT="--mirror https://{domain}/ --mirror-only"',
               mode: "block",
             },
             {
               label: "单次安装",
-              value:
-                "cpanm Moose --mirror https://{domain}/ --mirror-only",
+              value: "cpanm Moose --mirror https://{domain}/ --mirror-only",
               mode: "inline",
             },
           ],
@@ -203,14 +197,12 @@ export class CpanProvider extends ProviderDefinition {
           items: [
             {
               label: "cpan 交互式配置",
-              value:
-                "cpan\n> o conf urllist push https://{domain}/\n> o conf commit",
+              value: "cpan\n> o conf urllist push https://{domain}/\n> o conf commit",
               mode: "block",
             },
             {
               label: "CPAN/Config.pm 直接编辑",
-              value:
-                "$CPAN::Config->{urllist} = ['https://{domain}/'];",
+              value: "$CPAN::Config->{urllist} = ['https://{domain}/'];",
               mode: "block",
             },
           ],

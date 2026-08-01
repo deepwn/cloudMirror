@@ -80,7 +80,12 @@ export class PyPIProvider extends ProviderDefinition {
     },
   };
 
-  async doSearch(query: string, page: number, pageSize: number, _pat?: string): Promise<GenericSearchResponse | null> {
+  async doSearch(
+    query: string,
+    page: number,
+    pageSize: number,
+    _pat?: string,
+  ): Promise<GenericSearchResponse | null> {
     // 策略1: 精确匹配 — 直接请求 JSON API，最稳定
     const exactUrl = `https://pypi.org/pypi/${encodeURIComponent(query)}/json`;
     let exactHit: { name: string; version: string; description: string } | null = null;
@@ -90,7 +95,7 @@ export class PyPIProvider extends ProviderDefinition {
         headers: { "User-Agent": "CloudMirror/4.0", Accept: "application/json" },
       });
       if (exactRes.ok) {
-        const data = await exactRes.json() as Record<string, unknown>;
+        const data = (await exactRes.json()) as Record<string, unknown>;
         const info = (data.info ?? {}) as Record<string, unknown>;
         exactHit = {
           name: String(info.name ?? query),
@@ -111,7 +116,7 @@ export class PyPIProvider extends ProviderDefinition {
     try {
       const res = await fetch(htmlUrl.toString(), {
         headers: {
-          "Accept": "text/html",
+          Accept: "text/html",
           "Accept-Language": "en-US,en;q=0.9",
           "User-Agent": "Mozilla/5.0 (compatible; CloudMirror/4.0; +https://cloudmirror.dev)",
         },
@@ -128,9 +133,15 @@ export class PyPIProvider extends ProviderDefinition {
         }
 
         for (const snip of snippets) {
-          const nameM = snip.match(/<span\b[^>]*\bclass="[^"]*\bpackage-snippet__name\b[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
-          const verM = snip.match(/<span\b[^>]*\bclass="[^"]*\bpackage-snippet__version\b[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
-          const descM = snip.match(/<p\b[^>]*\bclass="[^"]*\bpackage-snippet__description\b[^"]*"[^>]*>([\s\S]*?)<\/p>/i);
+          const nameM = snip.match(
+            /<span\b[^>]*\bclass="[^"]*\bpackage-snippet__name\b[^"]*"[^>]*>([\s\S]*?)<\/span>/i,
+          );
+          const verM = snip.match(
+            /<span\b[^>]*\bclass="[^"]*\bpackage-snippet__version\b[^"]*"[^>]*>([\s\S]*?)<\/span>/i,
+          );
+          const descM = snip.match(
+            /<p\b[^>]*\bclass="[^"]*\bpackage-snippet__description\b[^"]*"[^>]*>([\s\S]*?)<\/p>/i,
+          );
 
           if (nameM) {
             htmlResults.push({
@@ -194,7 +205,9 @@ export class PyPIProvider extends ProviderDefinition {
       badges: [{ text: "{subtitle}", variant: "secondary" }],
       descriptionShow: true,
       stats: [],
-      quickCommands: [{ label: "pip install", template: "pip install {title} -i https://{domain}/simple" }],
+      quickCommands: [
+        { label: "pip install", template: "pip install {title} -i https://{domain}/simple" },
+      ],
       detailLink: "/detail?type=pypi&target={id}",
     };
   }
@@ -216,7 +229,10 @@ export class PyPIProvider extends ProviderDefinition {
       detailUrlTemplate: "https://pypi.org/project/{target}",
       quickConnects: [
         { label: "pip install", template: "pip install {target} -i https://{domain}/simple" },
-        { label: "uv pip install", template: "uv pip install {target} --index-url https://{domain}/simple" },
+        {
+          label: "uv pip install",
+          template: "uv pip install {target} --index-url https://{domain}/simple",
+        },
       ],
       tabs: [
         {
@@ -224,7 +240,10 @@ export class PyPIProvider extends ProviderDefinition {
           label: "README",
           icon: { kind: "lucide", name: "BookOpen" },
           type: "markdown",
-          dataSource: { endpoint: "https://pypi.org/pypi/{target}/json", responsePath: "info.description" },
+          dataSource: {
+            endpoint: "https://pypi.org/pypi/{target}/json",
+            responsePath: "info.description",
+          },
         },
         {
           id: "urls",
@@ -254,31 +273,70 @@ export class PyPIProvider extends ProviderDefinition {
         {
           title: "pip (推荐)",
           items: [
-            { label: "全局配置", value: "pip config set global.index-url https://{domain}/simple", mode: "block" },
-            { label: "单次使用", value: "pip install requests -i https://{domain}/simple", mode: "inline" },
+            {
+              label: "全局配置",
+              value: "pip config set global.index-url https://{domain}/simple",
+              mode: "block",
+            },
+            {
+              label: "单次使用",
+              value: "pip install requests -i https://{domain}/simple",
+              mode: "inline",
+            },
             { label: "恢复默认", value: "pip config unset global.index-url", mode: "inline" },
           ],
         },
         {
           title: "uv",
           items: [
-            { label: "安装依赖", value: "uv pip install requests --index-url https://{domain}/simple", mode: "inline" },
-            { label: "编译锁文件", value: "uv pip compile requirements.in --index-url https://{domain}/simple -o requirements.txt", mode: "block" },
-            { label: "全局默认索引", value: "export UV_INDEX_URL=https://{domain}/simple", mode: "block" },
+            {
+              label: "安装依赖",
+              value: "uv pip install requests --index-url https://{domain}/simple",
+              mode: "inline",
+            },
+            {
+              label: "编译锁文件",
+              value:
+                "uv pip compile requirements.in --index-url https://{domain}/simple -o requirements.txt",
+              mode: "block",
+            },
+            {
+              label: "全局默认索引",
+              value: "export UV_INDEX_URL=https://{domain}/simple",
+              mode: "block",
+            },
           ],
         },
         {
           title: "Poetry",
           items: [
-            { label: "添加源", value: "poetry source add --priority=primary cloudmirror https://{domain}/simple", mode: "block" },
-            { label: "pyproject.toml", value: '[[tool.poetry.source]]\nname = "cloudmirror"\nurl = "https://{domain}/simple"\npriority = "primary"', mode: "block" },
+            {
+              label: "添加源",
+              value: "poetry source add --priority=primary cloudmirror https://{domain}/simple",
+              mode: "block",
+            },
+            {
+              label: "pyproject.toml",
+              value:
+                '[[tool.poetry.source]]\nname = "cloudmirror"\nurl = "https://{domain}/simple"\npriority = "primary"',
+              mode: "block",
+            },
           ],
         },
         {
           title: "CI/CD 配置",
           items: [
-            { label: "GitHub Actions", value: "- name: Set up Python\n  uses: actions/setup-python@v5\n  with:\n    python-version: '3.12'\n\n- name: Configure PyPI mirror\n  run: pip config set global.index-url https://{domain}/simple", mode: "block" },
-            { label: "Dockerfile", value: "RUN pip config set global.index-url https://{domain}/simple", mode: "block" },
+            {
+              label: "GitHub Actions",
+              value:
+                "- name: Set up Python\n  uses: actions/setup-python@v5\n  with:\n    python-version: '3.12'\n\n- name: Configure PyPI mirror\n  run: pip config set global.index-url https://{domain}/simple",
+              mode: "block",
+            },
+            {
+              label: "Dockerfile",
+              value: "RUN pip config set global.index-url https://{domain}/simple",
+              mode: "block",
+            },
           ],
         },
       ],

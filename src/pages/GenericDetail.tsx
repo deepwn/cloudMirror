@@ -55,11 +55,7 @@ function DetailContent({ type, target }: { type: string; target: string }) {
   const prevTabIdx = tabIds.indexOf(prevTabRef.current);
   const activeTabIdx = tabIds.indexOf(activeTab);
   const tabDirection =
-    prevTabIdx === -1 || activeTabIdx === -1
-      ? null
-      : activeTabIdx > prevTabIdx
-        ? "right"
-        : "left";
+    prevTabIdx === -1 || activeTabIdx === -1 ? null : activeTabIdx > prevTabIdx ? "right" : "left";
 
   // 渲染完成后同步参考值，供下一次切换比较
   useEffect(() => {
@@ -108,7 +104,10 @@ function DetailContent({ type, target }: { type: string; target: string }) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <p className="text-muted-foreground">加载失败: {error || "未知错误"}</p>
-        <button onClick={() => navigate(-1)} className="text-sm text-primary hover:underline cursor-pointer">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-sm text-primary hover:underline cursor-pointer"
+        >
           返回
         </button>
       </div>
@@ -126,23 +125,18 @@ function DetailContent({ type, target }: { type: string; target: string }) {
 
       {/* ──── 标题区：icon + 名称/作者 + 源链接 ──── */}
       <div className="flex items-start gap-3">
-        {provider && (
-          <ProviderIcon icon={provider.meta.icon} size={40} className="shrink-0 mt-1" />
-        )}
+        {provider && <ProviderIcon icon={provider.meta.icon} size={40} className="shrink-0 mt-1" />}
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold tracking-tight break-all">{detail.title}</h1>
-          {detail.author && <p className="text-xs text-muted-foreground mt-0.5">by {detail.author}</p>}
+          {detail.author && (
+            <p className="text-xs text-muted-foreground mt-0.5">by {detail.author}</p>
+          )}
           {detail.description && (
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{detail.description}</p>
           )}
         </div>
         {provider && (
-          <a
-            href={detail.meta?.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0"
-          >
+          <a href={detail.meta?.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
             <Button variant="outline" size="sm" className="gap-1.5">
               打开源页面
               <ExternalLink size={14} />
@@ -154,7 +148,9 @@ function DetailContent({ type, target }: { type: string; target: string }) {
       {detail.stats && detail.stats.length > 0 && (
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           {detail.stats.map((s) => (
-            <span key={s.label}>{s.label}: {s.value}</span>
+            <span key={s.label}>
+              {s.label}: {s.value}
+            </span>
           ))}
         </div>
       )}
@@ -162,7 +158,12 @@ function DetailContent({ type, target }: { type: string; target: string }) {
       {detail.quickConnects && detail.quickConnects.length > 0 && (
         <div className="flex flex-col gap-2">
           {detail.quickConnects.map((qc, i) => (
-            <CodeBlock key={i} code={sub(qc.template)} variant="inline" ariaLabel={`复制${qc.label}命令`} />
+            <CodeBlock
+              key={i}
+              code={sub(qc.template)}
+              variant="inline"
+              ariaLabel={`复制${qc.label}命令`}
+            />
           ))}
         </div>
       )}

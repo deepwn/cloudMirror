@@ -11,7 +11,11 @@ import { getUserProviderByUserAndProvider } from "../db";
 import { decryptSecret } from "../crypto";
 
 /** 从请求的 Authorization 头解析用户 PAT，失败返回 undefined */
-async function resolveUserPat(request: Request, providerType: string, env: Env): Promise<string | undefined> {
+async function resolveUserPat(
+  request: Request,
+  providerType: string,
+  env: Env,
+): Promise<string | undefined> {
   if (!env.DB || !env.JWT_SECRET || !env.ENCRYPTION_KEY) return undefined;
   const auth = request.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return undefined;
@@ -32,7 +36,10 @@ export async function handleSearchRoute(request: Request, env: Env): Promise<Res
   const q = url.searchParams.get("q") || "";
   const type = url.searchParams.get("type") || "docker";
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10) || 1);
-  const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get("pageSize") || "25", 10) || 25));
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(url.searchParams.get("pageSize") || "25", 10) || 25),
+  );
 
   if (!q.trim()) {
     return makeRes(JSON.stringify({ error: 'query parameter "q" is required' }), 400, {

@@ -6,7 +6,11 @@ import { ProviderDefinition } from "./_base";
 import type {
   ProviderMeta,
   ProxyConfig,
-  ResultMapping, ResultCardConfig, DetailConfig, SetupGuideConfig, PopularSearch,
+  ResultMapping,
+  ResultCardConfig,
+  DetailConfig,
+  SetupGuideConfig,
+  PopularSearch,
   GenericSearchResponse,
 } from "../shared/types";
 
@@ -16,11 +20,15 @@ export class GitHubProvider extends ProviderDefinition {
   readonly authMode = "bearer" as const;
 
   readonly meta: ProviderMeta = {
-    id: "github", name: "GitHub", icon: { kind: "simple-icons", name: "siGithub" },
+    id: "github",
+    name: "GitHub",
+    icon: { kind: "simple-icons", name: "siGithub" },
     description: "GitHub 仓库、Release、Raw 文件、Git LFS 大文件与 Git 克隆加速",
-    searchEnabled: true, searchLabel: "搜索 GitHub 仓库...",
+    searchEnabled: true,
+    searchLabel: "搜索 GitHub 仓库...",
     searchHint: "git clone https://{hash}.mirror.example.com/user/repo.git",
-    setupComponent: "GitHubSetup", setupFields: [],
+    setupComponent: "GitHubSetup",
+    setupFields: [],
     enabled: true,
   };
 
@@ -37,40 +45,56 @@ export class GitHubProvider extends ProviderDefinition {
     exposeHeaders: true,
     hooks: {
       onBuildRequest: (ctx) => {
-        ctx.headers.set("Accept",
+        ctx.headers.set(
+          "Accept",
           ctx.target.includes("/info/lfs")
             ? "application/vnd.git-lfs+json"
-            : "application/vnd.github.v3+json");
+            : "application/vnd.github.v3+json",
+        );
       },
     },
   };
 
   // ---- 搜索 ----
 
-  async doSearch(query: string, page: number, pageSize: number, pat?: string): Promise<GenericSearchResponse | null> {
-    const searchQ = query.includes("user:") || query.includes("org:") || query.includes("repo:")
-      ? query
-      : `${query} in:name,description,topics`;
+  async doSearch(
+    query: string,
+    page: number,
+    pageSize: number,
+    pat?: string,
+  ): Promise<GenericSearchResponse | null> {
+    const searchQ =
+      query.includes("user:") || query.includes("org:") || query.includes("repo:")
+        ? query
+        : `${query} in:name,description,topics`;
 
     const params = new URLSearchParams({
-      q: searchQ, sort: "stars", order: "desc",
+      q: searchQ,
+      sort: "stars",
+      order: "desc",
       per_page: String(Math.min(pageSize, 100)),
       page: String(page),
     });
 
     const headers: Record<string, string> = {
-      "User-Agent": "CloudMirror/4.0", Accept: "application/vnd.github.v3+json",
+      "User-Agent": "CloudMirror/4.0",
+      Accept: "application/vnd.github.v3+json",
     };
     if (pat) headers["Authorization"] = `Bearer ${pat}`;
 
     const res = await fetch(`https://api.github.com/search/repositories?${params}`, { headers });
     if (!res.ok) return null;
 
-    const data = await res.json() as {
+    const data = (await res.json()) as {
       items?: Array<{
-        full_name?: string; description?: string; stargazers_count?: number;
-        forks_count?: number; language?: string; clone_url?: string;
-        html_url?: string; updated_at?: string;
+        full_name?: string;
+        description?: string;
+        stargazers_count?: number;
+        forks_count?: number;
+        language?: string;
+        clone_url?: string;
+        html_url?: string;
+        updated_at?: string;
       }>;
       total_count?: number;
     };
@@ -92,17 +116,25 @@ export class GitHubProvider extends ProviderDefinition {
       updated_at: raw.updated_at || "",
     }));
 
-    return { results: mapped.map((raw: unknown) => this.mapSearchItem(raw)), total, page, pageSize };
+    return {
+      results: mapped.map((raw: unknown) => this.mapSearchItem(raw)),
+      total,
+      page,
+      pageSize,
+    };
   }
 
   // ---- 配置 ----
 
   defineResultMapping(): ResultMapping {
     return {
-      itemsPath: "items", totalPath: "total",
-      itemKind: "repo", itemIdField: "name",
+      itemsPath: "items",
+      totalPath: "total",
+      itemKind: "repo",
+      itemIdField: "name",
       fields: {
-        title: "full_name", description: "description",
+        title: "full_name",
+        description: "description",
         author: "name",
         stats: [
           { key: "stars", path: "stars", label: "Stars", format: "number" },
@@ -117,7 +149,10 @@ export class GitHubProvider extends ProviderDefinition {
       titleTemplate: "{title}",
       badges: [],
       descriptionShow: true,
-      stats: [{ field: "stats.stars", label: "Stars" }, { field: "stats.forks", label: "Forks" }],
+      stats: [
+        { field: "stats.stars", label: "Stars" },
+        { field: "stats.forks", label: "Forks" },
+      ],
       quickCommands: [{ label: "git clone", template: "git clone https://{domain}/{title}.git" }],
       detailLink: "/detail?type=github&target={id}",
     };
@@ -127,7 +162,9 @@ export class GitHubProvider extends ProviderDefinition {
     return {
       infoEndpoint: "https://api.github.com/repos/{target}",
       infoMapping: {
-        title: "full_name", description: "description", author: "owner?.login",
+        title: "full_name",
+        description: "description",
+        author: "owner?.login",
         stats: [
           { label: "Stars", path: "stargazers_count" },
           { label: "Forks", path: "forks_count" },
@@ -137,22 +174,30 @@ export class GitHubProvider extends ProviderDefinition {
       },
       metaFields: { a: "full_name" },
       detailUrlTemplate: "https://github.com/{target}",
-      quickConnects: [
-        { label: "git clone", template: "git clone https://{domain}/{target}.git" },
-      ],
+      quickConnects: [{ label: "git clone", template: "git clone https://{domain}/{target}.git" }],
       tabs: [
-        { id: "readme", label: "README", icon: { kind: "lucide", name: "BookOpen" }, type: "markdown",
+        {
+          id: "readme",
+          label: "README",
+          icon: { kind: "lucide", name: "BookOpen" },
+          type: "markdown",
           dataSource: {
             endpoint: "https://api.github.com/repos/{target}/readme",
             responseType: "json",
             decode: "base64",
             // README 相对图片基于默认分支 raw 路径（后端内嵌为 data URL）
             docBase: "https://raw.githubusercontent.com/{target}/HEAD/",
-          } },
-        { id: "releases", label: "Releases", icon: { kind: "lucide", name: "Package" }, type: "releases",
+          },
+        },
+        {
+          id: "releases",
+          label: "Releases",
+          icon: { kind: "lucide", name: "Package" },
+          type: "releases",
           dataSource: {
             endpoint: "https://api.github.com/repos/{target}/releases?per_page=20",
-          } },
+          },
+        },
       ],
     };
   }
@@ -160,34 +205,103 @@ export class GitHubProvider extends ProviderDefinition {
   defineSetupGuide(): SetupGuideConfig {
     return {
       summary: "GitHub 仓库、Release、Raw 文件与 Git LFS 大文件加速。",
-      quickCommand: "git config --global url.\"https://{domain}/\".insteadOf https://github.com/",
+      quickCommand: 'git config --global url."https://{domain}/".insteadOf https://github.com/',
       sections: [
-        { title: "全局加速 (推荐)", items: [
-          { label: "git insteadOf", value: "git config --global url.\"https://{domain}/\".insteadOf https://github.com/", mode: "block" },
-          { label: "取消设置", value: "git config --global --unset url.\"https://{domain}/\".insteadOf", mode: "inline" },
-        ]},
-        { title: "Git Clone", items: [
-          { label: "直接克隆", value: "git clone https://{domain}/user/repo.git", mode: "block" },
-          { label: "浅克隆 (加速)", value: "git clone --depth 1 https://{domain}/user/repo.git", mode: "inline" },
-          { label: "子模块加速", value: "git config --global url.\"https://{domain}/\".insteadOf https://github.com/\ngit submodule update --init --recursive", mode: "block" },
-        ]},
-        { title: "Git LFS (大文件)", items: [
-          { label: "克隆含 LFS 文件", value: "git lfs clone https://{domain}/user/repo.git", mode: "block" },
-          { label: "单独拉取 LFS", value: "cd repo && git lfs fetch --all", mode: "inline" },
-          { label: "CI 跳过 LFS (加速)", value: "GIT_LFS_SKIP_SMUDGE=1 git clone https://{domain}/user/repo.git", mode: "block" },
-        ]},
-        { title: "Raw 文件", items: [
-          { label: "下载 Raw 文件", value: "wget https://{domain}/raw/user/repo/main/file", mode: "inline" },
-          { label: "curl 下载", value: "curl -O https://{domain}/raw/user/repo/main/file", mode: "inline" },
-        ]},
-        { title: "Release 下载", items: [
-          { label: "下载 Release 资源", value: "wget https://{domain}/releases/user/repo/download/v1.0/file.tar.gz", mode: "inline" },
-          { label: "Release 列表 API", value: "curl https://{domain}/api/repos/user/repo/releases/latest", mode: "inline" },
-        ]},
-        { title: "CI/CD 配置", items: [
-          { label: "GitHub Actions", value: "- name: Configure Git mirror\n  run: git config --global url.\"https://{domain}/\".insteadOf https://github.com/", mode: "block" },
-          { label: "Dockerfile", value: "RUN git config --global url.\"https://{domain}/\".insteadOf https://github.com/", mode: "block" },
-        ]},
+        {
+          title: "全局加速 (推荐)",
+          items: [
+            {
+              label: "git insteadOf",
+              value: 'git config --global url."https://{domain}/".insteadOf https://github.com/',
+              mode: "block",
+            },
+            {
+              label: "取消设置",
+              value: 'git config --global --unset url."https://{domain}/".insteadOf',
+              mode: "inline",
+            },
+          ],
+        },
+        {
+          title: "Git Clone",
+          items: [
+            { label: "直接克隆", value: "git clone https://{domain}/user/repo.git", mode: "block" },
+            {
+              label: "浅克隆 (加速)",
+              value: "git clone --depth 1 https://{domain}/user/repo.git",
+              mode: "inline",
+            },
+            {
+              label: "子模块加速",
+              value:
+                'git config --global url."https://{domain}/".insteadOf https://github.com/\ngit submodule update --init --recursive',
+              mode: "block",
+            },
+          ],
+        },
+        {
+          title: "Git LFS (大文件)",
+          items: [
+            {
+              label: "克隆含 LFS 文件",
+              value: "git lfs clone https://{domain}/user/repo.git",
+              mode: "block",
+            },
+            { label: "单独拉取 LFS", value: "cd repo && git lfs fetch --all", mode: "inline" },
+            {
+              label: "CI 跳过 LFS (加速)",
+              value: "GIT_LFS_SKIP_SMUDGE=1 git clone https://{domain}/user/repo.git",
+              mode: "block",
+            },
+          ],
+        },
+        {
+          title: "Raw 文件",
+          items: [
+            {
+              label: "下载 Raw 文件",
+              value: "wget https://{domain}/raw/user/repo/main/file",
+              mode: "inline",
+            },
+            {
+              label: "curl 下载",
+              value: "curl -O https://{domain}/raw/user/repo/main/file",
+              mode: "inline",
+            },
+          ],
+        },
+        {
+          title: "Release 下载",
+          items: [
+            {
+              label: "下载 Release 资源",
+              value: "wget https://{domain}/releases/user/repo/download/v1.0/file.tar.gz",
+              mode: "inline",
+            },
+            {
+              label: "Release 列表 API",
+              value: "curl https://{domain}/api/repos/user/repo/releases/latest",
+              mode: "inline",
+            },
+          ],
+        },
+        {
+          title: "CI/CD 配置",
+          items: [
+            {
+              label: "GitHub Actions",
+              value:
+                '- name: Configure Git mirror\n  run: git config --global url."https://{domain}/".insteadOf https://github.com/',
+              mode: "block",
+            },
+            {
+              label: "Dockerfile",
+              value:
+                'RUN git config --global url."https://{domain}/".insteadOf https://github.com/',
+              mode: "block",
+            },
+          ],
+        },
       ],
     };
   }

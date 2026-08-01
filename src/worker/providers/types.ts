@@ -10,4 +10,3 @@ export interface Env {
   /** 平台域名（子域代理后缀，如 mirror.example.com）。缺省用 mirror.example.com。 */
   APP_DOMAIN?: string;
 }
-

@@ -5,12 +5,7 @@
 import type { Env } from "./providers/types";
 import { parseHostname, resolveRoute } from "./router";
 import { handleApi } from "./api/index";
-import {
-  getClientIP,
-  checkRateLimit,
-  isBlockedUA,
-  isBlockedIP,
-} from "./rate-limit";
+import { getClientIP, checkRateLimit, isBlockedUA, isBlockedIP } from "./rate-limit";
 import { FAVICON_SVG, LOGO_SVG, makeRes, PREFLIGHT_INIT } from "./config";
 import { serveHtml } from "./html";
 import { handleCron } from "./cron";

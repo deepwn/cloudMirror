@@ -140,8 +140,7 @@ export class RubyGemsProvider extends ProviderDefinition {
           icon: { kind: "lucide", name: "Tag" },
           type: "table",
           dataSource: {
-            endpoint:
-              "https://rubygems.org/api/v1/versions/{target}.json",
+            endpoint: "https://rubygems.org/api/v1/versions/{target}.json",
             responsePath: "",
             columns: [
               { field: "number", label: "版本号" },
@@ -157,24 +156,20 @@ export class RubyGemsProvider extends ProviderDefinition {
 
   defineSetupGuide(): SetupGuideConfig {
     return {
-      summary:
-        "配置 RubyGems 源指向 cloudMirror，加速 gem 安装。",
-      quickCommand:
-        "gem install rails --source https://{domain}/",
+      summary: "配置 RubyGems 源指向 cloudMirror，加速 gem 安装。",
+      quickCommand: "gem install rails --source https://{domain}/",
       sections: [
         {
           title: "gem CLI",
           items: [
             {
               label: "添加镜像源",
-              value:
-                "gem sources --add https://{domain}/",
+              value: "gem sources --add https://{domain}/",
               mode: "block",
             },
             {
               label: "移除默认源 (可选)",
-              value:
-                "gem sources --remove https://rubygems.org/",
+              value: "gem sources --remove https://rubygems.org/",
               mode: "inline",
             },
             {
@@ -189,14 +184,12 @@ export class RubyGemsProvider extends ProviderDefinition {
           items: [
             {
               label: "全局镜像配置",
-              value:
-                "bundle config mirror.https://rubygems.org https://{domain}",
+              value: "bundle config mirror.https://rubygems.org https://{domain}",
               mode: "block",
             },
             {
               label: "项目级配置 (.bundle/config)",
-              value:
-                "---\nBUNDLE_MIRROR__HTTPS://RUBYGEMS__ORG/: https://{domain}",
+              value: "---\nBUNDLE_MIRROR__HTTPS://RUBYGEMS__ORG/: https://{domain}",
               mode: "block",
             },
           ],

@@ -58,9 +58,12 @@ describe("credentials API", () => {
     it("应按 provider 筛选", async () => {
       const token = await createTestToken(regularId, "user", TEST_JWT_SECRET);
 
-      const req = new Request("https://mirror.example.com/cloudmirror-api/v1/credentials?provider=docker", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const req = new Request(
+        "https://mirror.example.com/cloudmirror-api/v1/credentials?provider=docker",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       const res = await handleCredentialRoute(req, makeEnv(), "");
       expect(res.status).toBe(200);
@@ -169,15 +172,18 @@ describe("credentials API", () => {
       const { data: created } = (await createRes.json()) as { data: { id: string } };
 
       // 更新
-      const updateReq = new Request(`https://mirror.example.com/cloudmirror-api/v1/credentials/${created.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "CF-Connecting-IP": "10.0.0.1",
+      const updateReq = new Request(
+        `https://mirror.example.com/cloudmirror-api/v1/credentials/${created.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "CF-Connecting-IP": "10.0.0.1",
+          },
+          body: JSON.stringify({ label: "Updated Label", is_active: false }),
         },
-        body: JSON.stringify({ label: "Updated Label", is_active: false }),
-      });
+      );
 
       const updateRes = await handleCredentialRoute(updateReq, makeEnv(), `/${created.id}`);
       expect(updateRes.status).toBe(200);
@@ -225,14 +231,17 @@ describe("credentials API", () => {
       const { data: adminCred } = (await createRes.json()) as { data: { id: string } };
 
       // 普通用户尝试更新管理员的凭据
-      const updateReq = new Request(`https://mirror.example.com/cloudmirror-api/v1/credentials/${adminCred.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken}`,
+      const updateReq = new Request(
+        `https://mirror.example.com/cloudmirror-api/v1/credentials/${adminCred.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify({ label: "Hacked!" }),
         },
-        body: JSON.stringify({ label: "Hacked!" }),
-      });
+      );
 
       const updateRes = await handleCredentialRoute(updateReq, makeEnv(), `/${adminCred.id}`);
       expect(updateRes.status).toBe(403);
@@ -266,13 +275,16 @@ describe("credentials API", () => {
       const { data: created } = (await createRes.json()) as { data: { id: string } };
 
       // 删除
-      const deleteReq = new Request(`https://mirror.example.com/cloudmirror-api/v1/credentials/${created.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "CF-Connecting-IP": "10.0.0.1",
+      const deleteReq = new Request(
+        `https://mirror.example.com/cloudmirror-api/v1/credentials/${created.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "CF-Connecting-IP": "10.0.0.1",
+          },
         },
-      });
+      );
 
       const deleteRes = await handleCredentialRoute(deleteReq, makeEnv(), `/${created.id}`);
       expect(deleteRes.status).toBe(200);
@@ -291,10 +303,13 @@ describe("credentials API", () => {
 
     it("已删除的凭据应返回 404", async () => {
       const token = await createTestToken(regularId, "user", TEST_JWT_SECRET);
-      const req = new Request("https://mirror.example.com/cloudmirror-api/v1/credentials/nonexistent-id", {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const req = new Request(
+        "https://mirror.example.com/cloudmirror-api/v1/credentials/nonexistent-id",
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       const res = await handleCredentialRoute(req, makeEnv(), "/nonexistent-id");
       expect(res.status).toBe(404);

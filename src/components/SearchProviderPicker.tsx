@@ -28,19 +28,24 @@ export default function SearchProviderPicker({
     <DropdownMenu>
       <DropdownMenuTrigger className="flex h-7 items-center gap-1.5 rounded-md px-2 text-sm text-foreground outline-none transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95 data-popup-open:bg-muted/70">
         <ProviderIcon icon={active.meta.icon} size={15} />
-        <ChevronDown size={14} className="text-muted-foreground transition-transform duration-200 data-popup-open:rotate-180" />
+        <ChevronDown
+          size={14}
+          className="text-muted-foreground transition-transform duration-200 data-popup-open:rotate-180"
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56">
-        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">
-          切换搜索源
-        </div>
+        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">切换搜索源</div>
         <DropdownMenuSeparator />
         <div className="max-h-72 overflow-y-auto">
           {providers.map((provider) => {
             const isActive = provider.id === activeId;
 
             return (
-              <DropdownMenuItem key={provider.id} onClick={() => onChange(provider.id)} className="gap-2.5">
+              <DropdownMenuItem
+                key={provider.id}
+                onClick={() => onChange(provider.id)}
+                className="gap-2.5"
+              >
                 <ProviderIcon icon={provider.meta.icon} size={15} monochrome={!isActive} />
                 <span className="min-w-0 flex-1 truncate">{provider.displayName}</span>
                 {isActive && (

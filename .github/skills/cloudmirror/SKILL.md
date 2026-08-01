@@ -46,23 +46,34 @@ example.wrangler.toml # 部署配置模板
 
 ```ts
 import { ProviderDefinition } from "./_base";
-import type { ProviderMeta, ProxyConfig, SearchConfig,
-  ResultMapping, ResultCardConfig, DetailConfig, SetupGuideConfig } from "../shared/types";
+import type {
+  ProviderMeta,
+  ProxyConfig,
+  SearchConfig,
+  ResultMapping,
+  ResultCardConfig,
+  DetailConfig,
+  SetupGuideConfig,
+} from "../shared/types";
 
 export class FooProvider extends ProviderDefinition {
   readonly id = "foo";
   readonly upstream = "https://foo.example";
-  readonly authMode = "none" as const;          // "none" | "bearer" | "basic"
+  readonly authMode = "none" as const; // "none" | "bearer" | "basic"
 
   readonly meta: ProviderMeta = {
-    id: "foo", name: "Foo Central", label: "Foo",
-    icon: { kind: "simple-icons", name: "siFoo" },  // 优先级: simple-icons > lucide > svg > image
+    id: "foo",
+    name: "Foo Central",
+    label: "Foo",
+    icon: { kind: "simple-icons", name: "siFoo" }, // 优先级: simple-icons > lucide > svg > image
     description: "Foo 源镜像加速",
-    searchEnabled: true, searchLabel: "搜索 Foo...",
+    searchEnabled: true,
+    searchLabel: "搜索 Foo...",
     searchHint: "foo install <pkg>",
-    setupComponent: "", setupFields: [],
+    setupComponent: "",
+    setupFields: [],
     enabled: true,
-  };   // 注意：不含 searchApi/route（由 site-info 自动派生）
+  }; // 注意：不含 searchApi/route（由 site-info 自动派生）
 }
 ```
 

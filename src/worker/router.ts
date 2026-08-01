@@ -14,7 +14,10 @@ import type { ProviderDefinition } from "../providers/_base";
  * 解析 hostname，提取 hash。
  * 格式: {hash}.{appDomain} → hash；裸域/其他返回 null。
  */
-export function parseHostname(hostname: string, appDomain: string = DEFAULT_APP_DOMAIN): string | null {
+export function parseHostname(
+  hostname: string,
+  appDomain: string = DEFAULT_APP_DOMAIN,
+): string | null {
   const suffix = "." + appDomain;
   if (!hostname.endsWith(suffix)) return null;
   const hash = hostname.slice(0, -suffix.length);

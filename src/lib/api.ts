@@ -42,7 +42,10 @@ export function dispatchAuthEvent() {
   window.dispatchEvent(new CustomEvent("authchange"));
 }
 
-export async function fetchProxy(fetchUrl: string, type: "json" | "text" = "json"): Promise<{ ok: boolean; status: number; body: string; isJson: boolean }> {
+export async function fetchProxy(
+  fetchUrl: string,
+  type: "json" | "text" = "json",
+): Promise<{ ok: boolean; status: number; body: string; isJson: boolean }> {
   return request<{ ok: boolean; status: number; body: string; isJson: boolean }>("/fetch", {
     method: "POST",
     body: JSON.stringify({ url: fetchUrl, type }),
@@ -120,9 +123,16 @@ export const auth = {
       { method: "POST", body: JSON.stringify(data) },
     ),
   sessions: () =>
-    request<{ success: boolean; data: Array<{ id: string; client_ip: string | null; client_ua: string | null; is_current: number; created_at: string }> }>(
-      "/auth/sessions",
-    ),
+    request<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        client_ip: string | null;
+        client_ua: string | null;
+        is_current: number;
+        created_at: string;
+      }>;
+    }>("/auth/sessions"),
   revokeAll: () =>
     request<{ success: boolean; token: string }>("/auth/sessions/revoke", { method: "POST" }),
 };
@@ -130,9 +140,13 @@ export const auth = {
 // Search (v1.0: 统一搜索)
 export const apiSearch = {
   search: (q: string, type: string, page = 1, pageSize = 25) =>
-    request<{ success?: boolean; results: GenericSearchItem[]; total: number; page: number; pageSize: number }>(
-      `/search?q=${encodeURIComponent(q)}&type=${type}&page=${page}&pageSize=${pageSize}`,
-    ),
+    request<{
+      success?: boolean;
+      results: GenericSearchItem[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>(`/search?q=${encodeURIComponent(q)}&type=${type}&page=${page}&pageSize=${pageSize}`),
 };
 
 // Detail (v1.0: 统一详情 API — 服务端一站式获取 info + tabs)

@@ -15,14 +15,22 @@ afterEach(() => {
 
 describe("fetchRepositoryReadme", () => {
   it("GitHub：返回 README 内容与 raw docBase", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({
-        content: Buffer.from("# Hello\n![logo](./assets/a.png)").toString("base64"),
-        encoding: "base64",
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              content: Buffer.from("# Hello\n![logo](./assets/a.png)").toString("base64"),
+              encoding: "base64",
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+      ),
+    );
 
     const result = await fetchRepositoryReadme("https://github.com/flutter/packages");
 
@@ -31,20 +39,38 @@ describe("fetchRepositoryReadme", () => {
   });
 
   it("GitHub：带路径后缀的 repository URL 也能解析", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({
-        content: Buffer.from("readme").toString("base64"),
-        encoding: "base64",
-      }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              content: Buffer.from("readme").toString("base64"),
+              encoding: "base64",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+      ),
+    );
 
-    const result = await fetchRepositoryReadme("https://github.com/owner/repo/tree/main/packages/foo");
+    const result = await fetchRepositoryReadme(
+      "https://github.com/owner/repo/tree/main/packages/foo",
+    );
 
     expect(result?.docBase).toBe("https://raw.githubusercontent.com/owner/repo/HEAD/");
   });
 
   it("GitLab：返回 README 内容与 /-/raw/HEAD/ docBase", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response("# GitLab Readme", { status: 200, headers: { "Content-Type": "text/plain" } })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("# GitLab Readme", {
+            status: 200,
+            headers: { "Content-Type": "text/plain" },
+          }),
+      ),
+    );
 
     const result = await fetchRepositoryReadme("https://gitlab.com/group/project");
 
@@ -53,13 +79,19 @@ describe("fetchRepositoryReadme", () => {
   });
 
   it("不支持的主机返回 null", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 200 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 200 })),
+    );
     const result = await fetchRepositoryReadme("https://bitbucket.org/user/repo");
     expect(result).toBeNull();
   });
 
   it("GitHub 请求失败返回 null", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 404 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 404 })),
+    );
     const result = await fetchRepositoryReadme("https://github.com/owner/repo");
     expect(result).toBeNull();
   });

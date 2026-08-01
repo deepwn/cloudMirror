@@ -31,13 +31,15 @@ export default function StaticTabRenderer({ tab, hash, domain, target }: Props) 
 
     case "table": {
       const { columns } = tab;
-      if (!columns) return <div className="text-center py-8 text-sm text-muted-foreground">无列配置</div>;
+      if (!columns)
+        return <div className="text-center py-8 text-sm text-muted-foreground">无列配置</div>;
       const rows = Array.isArray(tab.data)
         ? tab.data
         : tab.data && typeof tab.data === "object"
           ? Object.values(tab.data as Record<string, unknown>)
           : [];
-      if (rows.length === 0) return <div className="text-center py-8 text-sm text-muted-foreground">无数据</div>;
+      if (rows.length === 0)
+        return <div className="text-center py-8 text-sm text-muted-foreground">无数据</div>;
 
       return (
         <Table>
@@ -82,27 +84,29 @@ export default function StaticTabRenderer({ tab, hash, domain, target }: Props) 
 
     case "keyValue": {
       const obj = tab.data as Record<string, unknown> | undefined;
-      if (!obj || Object.keys(obj).length === 0) return <div className="text-center py-8 text-sm text-muted-foreground">无数据</div>;
+      if (!obj || Object.keys(obj).length === 0)
+        return <div className="text-center py-8 text-sm text-muted-foreground">无数据</div>;
       return (
         <div className="space-y-1">
           {Object.entries(obj).map(([k, v]) => {
-            const display = typeof v === "object" && v !== null
-              ? JSON.stringify(v)
-              : String(v ?? "-");
+            const display =
+              typeof v === "object" && v !== null ? JSON.stringify(v) : String(v ?? "-");
             return (
-            <div key={k} className="flex items-center gap-3 text-sm">
-              <span className="font-mono text-xs text-muted-foreground min-w-40">{k}</span>
-              <span>{display}</span>
-            </div>
-          );})}
+              <div key={k} className="flex items-center gap-3 text-sm">
+                <span className="font-mono text-xs text-muted-foreground min-w-40">{k}</span>
+                <span>{display}</span>
+              </div>
+            );
+          })}
         </div>
       );
     }
 
     case "code": {
-      const codeData = typeof tab.data === "object" && tab.data !== null
-        ? JSON.stringify(tab.data, null, 2)
-        : String(tab.data ?? "");
+      const codeData =
+        typeof tab.data === "object" && tab.data !== null
+          ? JSON.stringify(tab.data, null, 2)
+          : String(tab.data ?? "");
       return <CodeBlock code={codeData} lang={tab.language ?? "text"} />;
     }
 
@@ -137,8 +141,11 @@ function formatCellValue(val: unknown, format?: string, emptyText?: string): str
   }
   if (format === "number") return Number(val).toLocaleString();
   if (format === "date") {
-    try { return new Date(String(val)).toLocaleDateString("zh-CN"); }
-    catch { return String(val); }
+    try {
+      return new Date(String(val)).toLocaleDateString("zh-CN");
+    } catch {
+      return String(val);
+    }
   }
   return String(val);
 }
@@ -215,7 +222,9 @@ function ReleasesTab({
                 />
                 <span className="truncate font-mono text-sm font-medium">{rel.tag_name}</span>
                 {rel.prerelease && (
-                  <Badge variant="secondary" className="text-[10px]">预发布</Badge>
+                  <Badge variant="secondary" className="text-[10px]">
+                    预发布
+                  </Badge>
                 )}
                 {rel.name && rel.name !== rel.tag_name && (
                   <span className="truncate text-xs text-muted-foreground">{rel.name}</span>

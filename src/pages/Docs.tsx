@@ -19,7 +19,7 @@ export default function Docs() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const providers = useAllProviders();
-  const selected = providers.find(p => p.id === (id || providers[0]?.id)) || providers[0];
+  const selected = providers.find((p) => p.id === (id || providers[0]?.id)) || providers[0];
   const { getHash, getDomain, domain } = useUserProviderHash();
 
   const [hashes, setHashes] = useState<Record<string, string>>({});
@@ -32,10 +32,14 @@ export default function Docs() {
         if (up.hash) map[up.provider] = `${up.hash}.${domain}`;
       }
       setHashes(map);
-    } catch { /* not logged in */ }
+    } catch {
+      /* not logged in */
+    }
   }, [domain]);
 
-  useEffect(() => { loadHashes(); }, [loadHashes]);
+  useEffect(() => {
+    loadHashes();
+  }, [loadHashes]);
 
   if (!selected) {
     return (
@@ -67,10 +71,11 @@ export default function Docs() {
                   key={p.id}
                   type="button"
                   onClick={() => navigate(`/docs/${p.id}`)}
-                  className={`group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors text-left ${active
-                    ? "bg-primary/8 text-primary font-medium"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
+                  className={`group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors text-left ${
+                    active
+                      ? "bg-primary/8 text-primary font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
                 >
                   <ProviderIcon icon={p.meta.icon} size={14} className="shrink-0" />
                   <span className="flex-1 truncate">{p.displayName}</span>
@@ -100,7 +105,11 @@ export default function Docs() {
           {/* Quick Start */}
           <section className="mb-10">
             <h2 className="text-lg font-semibold mb-3">快速开始</h2>
-            <CodeBlock code={rendered.quickStart.command} variant="inline" ariaLabel={`复制${selected.displayName}快速命令`} />
+            <CodeBlock
+              code={rendered.quickStart.command}
+              variant="inline"
+              ariaLabel={`复制${selected.displayName}快速命令`}
+            />
           </section>
 
           {/* 自动派生章节（代理端点 / 搜索 API / 凭据 / 快速连接） */}

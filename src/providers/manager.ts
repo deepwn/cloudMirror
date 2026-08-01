@@ -33,10 +33,15 @@ export class ProviderManager {
     try {
       const issues = def.validateContract();
       if (issues.length) {
-        console.warn(`[ProviderManager] provider "${def.id}" contract issues:\n  - ${issues.join("\n  - ")}`);
+        console.warn(
+          `[ProviderManager] provider "${def.id}" contract issues:\n  - ${issues.join("\n  - ")}`,
+        );
       }
     } catch (err) {
-      console.warn(`[ProviderManager] provider "${def.id}" validateContract threw:`, (err as Error).message);
+      console.warn(
+        `[ProviderManager] provider "${def.id}" validateContract threw:`,
+        (err as Error).message,
+      );
     }
     this.providers.set(def.id, def);
     this.listeners.forEach((fn) => fn(def));

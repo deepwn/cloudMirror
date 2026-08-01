@@ -155,11 +155,8 @@ function stubSearchFetch() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL | Request) => {
-      const url = typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : input.url;
+      const url =
+        typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.startsWith("https://index.docker.io/v1/search")) {
         return jsonResponse({
@@ -384,13 +381,19 @@ function stubSearchFetch() {
       if (url.startsWith("https://pub.dev/api/packages/")) {
         return jsonResponse({
           name: "provider",
-          latest: { version: "6.1.2", pubspec: { description: "状态管理", homepage: "https://pub.dev/packages/provider" } },
+          latest: {
+            version: "6.1.2",
+            pubspec: { description: "状态管理", homepage: "https://pub.dev/packages/provider" },
+          },
         });
       }
 
       if (url.startsWith("https://crandb.r-pkg.org/-/desc")) {
         return jsonResponse({
-          ggplot2: { version: "3.5.1", title: "Create Elegant Data Visualisations Using the Grammar of Graphics" },
+          ggplot2: {
+            version: "3.5.1",
+            title: "Create Elegant Data Visualisations Using the Grammar of Graphics",
+          },
         });
       }
 

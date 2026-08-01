@@ -60,7 +60,8 @@ export async function handleApi(
     case path === "/site-info":
       return makeRes(
         JSON.stringify({
-          name: "cloudMirror", version: "1.0.0",
+          name: "cloudMirror",
+          version: "1.0.0",
           domain: env.APP_DOMAIN ?? DEFAULT_APP_DOMAIN,
           // searchApi / route 由 platformApi() 统一派生，Provider 不再手写（SDK v2）
           providers: getAllMetas().map((m) => ({
@@ -70,7 +71,8 @@ export async function handleApi(
           })),
           notice: "",
         }),
-        200, { "Content-Type": "application/json" },
+        200,
+        { "Content-Type": "application/json" },
       );
 
     default:

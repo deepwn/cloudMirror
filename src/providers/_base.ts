@@ -3,11 +3,27 @@
 // ============================================================================
 
 import type {
-  ProviderMeta, GenericSearchItem, GenericSearchResponse,
-  ResultMapping, ResultCardConfig, DetailConfig, DetailData, DetailTabData,
-  SetupGuideConfig, PopularSearch, ResolvedRoute, MetaFieldsConfig,
-  ProxyConfig, ProxyContext, ProxyRoute, SearchConfig, SearchContext,
-  DetailContext, RenderContract, ProviderDocs, DocsSection,
+  ProviderMeta,
+  GenericSearchItem,
+  GenericSearchResponse,
+  ResultMapping,
+  ResultCardConfig,
+  DetailConfig,
+  DetailData,
+  DetailTabData,
+  SetupGuideConfig,
+  PopularSearch,
+  ResolvedRoute,
+  MetaFieldsConfig,
+  ProxyConfig,
+  ProxyContext,
+  ProxyRoute,
+  SearchConfig,
+  SearchContext,
+  DetailContext,
+  RenderContract,
+  ProviderDocs,
+  DocsSection,
 } from "../shared/types";
 import { getByPath } from "../shared/utils/json-path";
 import { decodeBase64Content } from "./utils/base64";
@@ -17,7 +33,6 @@ import { decodeBase64Content } from "./utils/base64";
 // ============================================================================
 
 export abstract class ProviderDefinition {
-
   // ============ 必须覆写 ============
 
   /** 全局唯一标识，对应 user_providers.provider */
@@ -90,7 +105,12 @@ export abstract class ProviderDefinition {
 
       // 3. fetch 上游
       const body = ["GET", "HEAD"].includes(request.method) ? undefined : request.body;
-      const res = await fetch(ctx.target, { method: request.method, headers: ctx.headers, body, redirect: "manual" });
+      const res = await fetch(ctx.target, {
+        method: request.method,
+        headers: ctx.headers,
+        body,
+        redirect: "manual",
+      });
       ctx.upstream = res;
 
       // 4. onSend：CORS 头 + 响应改写
@@ -123,7 +143,12 @@ export abstract class ProviderDefinition {
    * 执行搜索。返回 null 表示不支持搜索。pat 由 worker 层从用户 JWT 解析后传入，Provider 可选择性使用以突破速率限制。
    * 默认实现：由 this.search 声明式配置 + defineResultMapping 的 itemsPath/totalPath 驱动。
    */
-  async doSearch(query: string, page: number, pageSize: number, pat?: string): Promise<GenericSearchResponse | null> {
+  async doSearch(
+    query: string,
+    page: number,
+    pageSize: number,
+    pat?: string,
+  ): Promise<GenericSearchResponse | null> {
     if (!this.search) return null;
     const cfg = this.search;
     const m = this.defineResultMapping();
@@ -149,7 +174,8 @@ export abstract class ProviderDefinition {
         ctx.url.searchParams.set(cfg.pageSizeParam ?? "per_page", String(pageSize));
       } else if (pagination === "offset") {
         ctx.url.searchParams.set(cfg.pageSizeParam ?? "per_page", String(pageSize));
-        if (cfg.offsetParam) ctx.url.searchParams.set(cfg.offsetParam, String((page - 1) * pageSize));
+        if (cfg.offsetParam)
+          ctx.url.searchParams.set(cfg.offsetParam, String((page - 1) * pageSize));
       } else {
         // token / none：仅页大小，page 恒 1（token 分页无法回溯）
         ctx.url.searchParams.set(cfg.pageSizeParam ?? "per_page", String(pageSize));
@@ -162,7 +188,7 @@ export abstract class ProviderDefinition {
       const res = await fetch(ctx.url.toString(), { headers: ctx.headers });
       if (!res.ok) return null;
 
-      ctx.data = await res.json() as Record<string, unknown>;
+      ctx.data = (await res.json()) as Record<string, unknown>;
       await cfg.hooks?.onParse?.(ctx);
 
       const data = ctx.data as Record<string, unknown>;
@@ -178,7 +204,9 @@ export abstract class ProviderDefinition {
         const seen = new Set<string>();
         for (const it of results) {
           if (seen.has(it.id)) {
-            console.warn(`[${this.id}] duplicate search item id: "${it.id}" — check itemIdField in defineResultMapping()`);
+            console.warn(
+              `[${this.id}] duplicate search item id: "${it.id}" — check itemIdField in defineResultMapping()`,
+            );
           } else {
             seen.add(it.id);
           }
@@ -206,7 +234,9 @@ export abstract class ProviderDefinition {
 
   // ============ 可选覆写 ============
 
-  definePopularSearches(): PopularSearch[] { return []; }
+  definePopularSearches(): PopularSearch[] {
+    return [];
+  }
 
   // ============ RenderContract（SDK v2 §5.4） ============
 
@@ -230,11 +260,13 @@ export abstract class ProviderDefinition {
     if (!this.meta.name) issues.push("meta.name empty");
     if (!this.meta.description) issues.push("meta.description empty");
     if (!r.detail.infoEndpoint) issues.push("detail.infoEndpoint empty");
-    if (r.detail.infoEndpoint.includes("{id}")) issues.push("detail.infoEndpoint must use {target}, not {id}");
+    if (r.detail.infoEndpoint.includes("{id}"))
+      issues.push("detail.infoEndpoint must use {target}, not {id}");
     for (const tab of r.detail.tabs) {
       if (!tab.id) issues.push("tab.id empty");
       if (!tab.label) issues.push(`tab ${tab.id} label empty`);
-      if (tab.dataSource.endpoint.includes("{id}")) issues.push(`tab ${tab.id} endpoint must use {target}, not {id}`);
+      if (tab.dataSource.endpoint.includes("{id}"))
+        issues.push(`tab ${tab.id} endpoint must use {target}, not {id}`);
     }
     if (!r.setupGuide.summary) issues.push("setupGuide.summary empty");
     if (!r.setupGuide.quickCommand) issues.push("setupGuide.quickCommand empty");
@@ -242,11 +274,15 @@ export abstract class ProviderDefinition {
 
     // SSRF 防护：代理路由、upstream 与搜索/详情端点必须 https，且 host 不得为 IP/内网保留段
     // （白名单由声明派生，注册期强制校验，见 docs §5.7）
-    if (!this.upstream.startsWith("https://")) issues.push(`upstream must be https: ${this.upstream}`);
-    if (isSuspiciousHostname(hostOf(this.upstream))) issues.push(`upstream host is internal/IP: ${this.upstream}`);
+    if (!this.upstream.startsWith("https://"))
+      issues.push(`upstream must be https: ${this.upstream}`);
+    if (isSuspiciousHostname(hostOf(this.upstream)))
+      issues.push(`upstream host is internal/IP: ${this.upstream}`);
     for (const rt of this.proxy.routes ?? []) {
-      if (!rt.upstream.startsWith("https://")) issues.push(`proxy route ${rt.prefix} upstream must be https: ${rt.upstream}`);
-      if (isSuspiciousHostname(hostOf(rt.upstream))) issues.push(`proxy route ${rt.prefix} upstream host is internal/IP: ${rt.upstream}`);
+      if (!rt.upstream.startsWith("https://"))
+        issues.push(`proxy route ${rt.prefix} upstream must be https: ${rt.upstream}`);
+      if (isSuspiciousHostname(hostOf(rt.upstream)))
+        issues.push(`proxy route ${rt.prefix} upstream host is internal/IP: ${rt.upstream}`);
     }
     if (this.search?.endpoint && !this.search.endpoint.startsWith("https://")) {
       issues.push(`search endpoint must be https: ${this.search.endpoint}`);
@@ -254,8 +290,10 @@ export abstract class ProviderDefinition {
     if (this.search?.endpoint && isSuspiciousHostname(hostOf(this.search.endpoint))) {
       issues.push(`search endpoint host is internal/IP: ${this.search.endpoint}`);
     }
-    if (!r.detail.infoEndpoint.startsWith("https://")) issues.push(`detail.infoEndpoint must be https: ${r.detail.infoEndpoint}`);
-    if (isSuspiciousHostname(hostOf(r.detail.infoEndpoint))) issues.push(`detail.infoEndpoint host is internal/IP: ${r.detail.infoEndpoint}`);
+    if (!r.detail.infoEndpoint.startsWith("https://"))
+      issues.push(`detail.infoEndpoint must be https: ${r.detail.infoEndpoint}`);
+    if (isSuspiciousHostname(hostOf(r.detail.infoEndpoint)))
+      issues.push(`detail.infoEndpoint host is internal/IP: ${r.detail.infoEndpoint}`);
 
     return issues;
   }
@@ -297,7 +335,8 @@ export abstract class ProviderDefinition {
    * Docker 类 Provider 可返回 [{ value:"docker", authMode:"basic" }, { value:"ghcr", authMode:"bearer" }, ...]
    */
   defineCredentialTypes(): { value: string; label: string; authMode: "basic" | "bearer" }[] {
-    if (this.authMode === "none") return [{ value: this.id, label: this.displayName, authMode: "bearer" as const }];
+    if (this.authMode === "none")
+      return [{ value: this.id, label: this.displayName, authMode: "bearer" as const }];
     return [{ value: this.id, label: this.displayName, authMode: this.authMode }];
   }
 
@@ -309,7 +348,10 @@ export abstract class ProviderDefinition {
    */
   mapSearchItem(raw: unknown): GenericSearchItem {
     const m = this.defineResultMapping();
-    const stats: Record<string, { value: unknown; label: string; format: "number" | "bytes" | "duration" | "date" | "text" }> = {};
+    const stats: Record<
+      string,
+      { value: unknown; label: string; format: "number" | "bytes" | "duration" | "date" | "text" }
+    > = {};
 
     for (const s of m.fields.stats ?? []) {
       stats[s.key] = {
@@ -353,14 +395,21 @@ export abstract class ProviderDefinition {
       });
       if (infoRes.ok) {
         const text = await infoRes.text();
-        try { rawInfo = JSON.parse(text) as Record<string, unknown>; } catch { rawInfo = null; }
+        try {
+          rawInfo = JSON.parse(text) as Record<string, unknown>;
+        } catch {
+          rawInfo = null;
+        }
       }
-    } catch { /* info fetch failed */ }
+    } catch {
+      /* info fetch failed */
+    }
 
     const mapping = config.infoMapping;
     const title = rawInfo ? String(getByPath(rawInfo, mapping.title) ?? target) : target;
     const description = rawInfo ? String(getByPath(rawInfo, mapping.description) ?? "") : "";
-    const author = mapping.author && rawInfo ? String(getByPath(rawInfo, mapping.author) ?? "") : undefined;
+    const author =
+      mapping.author && rawInfo ? String(getByPath(rawInfo, mapping.author) ?? "") : undefined;
     const stats = mapping.stats?.map((s) => ({
       label: s.label,
       value: rawInfo ? String(getByPath(rawInfo, s.path) ?? "-") : "-",
@@ -377,7 +426,10 @@ export abstract class ProviderDefinition {
       : `${this.upstream}/${epTarget}`;
 
     const detail: DetailData = {
-      title, description, author, stats,
+      title,
+      description,
+      author,
+      stats,
       quickConnects: config.quickConnects,
       tabs: [],
       meta: { ...meta, url },
@@ -399,13 +451,26 @@ export abstract class ProviderDefinition {
         });
         if (tabRes.ok) {
           const body = await tabRes.text();
-          const raw: unknown = isText ? body : (() => { try { return JSON.parse(body); } catch { return body; } })();
+          const raw: unknown = isText
+            ? body
+            : (() => {
+                try {
+                  return JSON.parse(body);
+                } catch {
+                  return body;
+                }
+              })();
           const resolved = tabConfig.dataSource.responsePath
             ? getByPath(raw, tabConfig.dataSource.responsePath)
             : raw;
 
           // 显式声明 base64 解码（如 GitHub readme 响应）
-          if (!isText && tabConfig.dataSource.decode === "base64" && typeof resolved === "object" && resolved !== null) {
+          if (
+            !isText &&
+            tabConfig.dataSource.decode === "base64" &&
+            typeof resolved === "object" &&
+            resolved !== null
+          ) {
             const obj = resolved as Record<string, unknown>;
             if (obj.content && obj.encoding === "base64") {
               const decoded = decodeBase64Content(String(obj.content));
@@ -417,7 +482,9 @@ export abstract class ProviderDefinition {
             data = resolved ?? null;
           }
         }
-      } catch { /* tab fetch failed, use null data */ }
+      } catch {
+        /* tab fetch failed, use null data */
+      }
 
       const tab: DetailTabData = {
         id: tabConfig.id,
@@ -462,7 +529,11 @@ export abstract class ProviderDefinition {
  * 从原始响应中提取模板插值所需的通用变量（version/v/g/a）。
  * 路径由各 Provider 的 DetailConfig.metaFields 自行声明，base 仅负责解析渲染。
  */
-function extractMeta(raw: Record<string, unknown>, fallback: string, fields?: MetaFieldsConfig): Record<string, string> {
+function extractMeta(
+  raw: Record<string, unknown>,
+  fallback: string,
+  fields?: MetaFieldsConfig,
+): Record<string, string> {
   const v = first(raw, normalize(fields?.version));
   return {
     version: v ?? "",

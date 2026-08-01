@@ -118,8 +118,7 @@ export class GoModProvider extends ProviderDefinition {
           icon: { kind: "lucide", name: "Tag" },
           type: "table",
           dataSource: {
-            endpoint:
-              "https://pkg.go.dev/v1beta/versions/{target}?limit=50",
+            endpoint: "https://pkg.go.dev/v1beta/versions/{target}?limit=50",
             responsePath: "items",
             columns: [
               { field: "version", label: "版本号" },
@@ -135,8 +134,7 @@ export class GoModProvider extends ProviderDefinition {
 
   defineSetupGuide(): SetupGuideConfig {
     return {
-      summary:
-        "设置 GOPROXY 环境变量指向 cloudMirror，加速 Go 模块下载。",
+      summary: "设置 GOPROXY 环境变量指向 cloudMirror，加速 Go 模块下载。",
       quickCommand: "go env -w GOPROXY=https://{domain},direct",
       sections: [
         {
@@ -180,8 +178,7 @@ export class GoModProvider extends ProviderDefinition {
             },
             {
               label: "Dockerfile",
-              value:
-                "ENV GOPROXY=https://{domain},direct",
+              value: "ENV GOPROXY=https://{domain},direct",
               mode: "block",
             },
           ],

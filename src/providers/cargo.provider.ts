@@ -5,7 +5,8 @@
 import { ProviderDefinition } from "./_base";
 import type {
   ProviderMeta,
-  ProxyConfig, SearchConfig,
+  ProxyConfig,
+  SearchConfig,
   ResultMapping,
   ResultCardConfig,
   DetailConfig,
@@ -91,7 +92,12 @@ export class CargoProvider extends ProviderDefinition {
         author: undefined,
         stats: [
           { key: "downloads", path: "downloads", label: "总下载", format: "number" },
-          { key: "recent_downloads", path: "recent_downloads", label: "近期下载", format: "number" },
+          {
+            key: "recent_downloads",
+            path: "recent_downloads",
+            label: "近期下载",
+            format: "number",
+          },
         ],
       },
     };
@@ -102,12 +108,8 @@ export class CargoProvider extends ProviderDefinition {
       titleTemplate: "{title}",
       badges: [{ text: "{subtitle}", variant: "secondary" }],
       descriptionShow: true,
-      stats: [
-        { field: "stats.downloads", label: "下载" },
-      ],
-      quickCommands: [
-        { label: "cargo add", template: "cargo add {title} --registry cloudmirror" },
-      ],
+      stats: [{ field: "stats.downloads", label: "下载" }],
+      quickCommands: [{ label: "cargo add", template: "cargo add {title} --registry cloudmirror" }],
       detailLink: "/detail?type=cargo&target={id}",
     };
   }
@@ -141,7 +143,10 @@ export class CargoProvider extends ProviderDefinition {
           label: "README",
           icon: { kind: "lucide", name: "BookOpen" },
           type: "markdown",
-          dataSource: { endpoint: "https://crates.io/api/v1/crates/{target}/readme", responseType: "text" },
+          dataSource: {
+            endpoint: "https://crates.io/api/v1/crates/{target}/readme",
+            responseType: "text",
+          },
         },
         {
           id: "versions",
@@ -216,7 +221,7 @@ export class CargoProvider extends ProviderDefinition {
             {
               label: "GitHub Actions",
               value:
-                '- name: Configure Cargo registry\n  run: |\n    mkdir -p .cargo\n    echo \'[source.crates-io]\' >> .cargo/config.toml\n    echo \'replace-with = "cloudmirror"\' >> .cargo/config.toml\n    echo \'\' >> .cargo/config.toml\n    echo \'[source.cloudmirror]\' >> .cargo/config.toml\n    echo \'registry = "sparse+https://{domain}/api/v1/crates/"\' >> .cargo/config.toml',
+                "- name: Configure Cargo registry\n  run: |\n    mkdir -p .cargo\n    echo '[source.crates-io]' >> .cargo/config.toml\n    echo 'replace-with = \"cloudmirror\"' >> .cargo/config.toml\n    echo '' >> .cargo/config.toml\n    echo '[source.cloudmirror]' >> .cargo/config.toml\n    echo 'registry = \"sparse+https://{domain}/api/v1/crates/\"' >> .cargo/config.toml",
               mode: "block",
             },
           ],

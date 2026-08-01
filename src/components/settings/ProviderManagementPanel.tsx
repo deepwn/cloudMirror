@@ -74,7 +74,9 @@ export default function ProviderManagementPanel({ isAdmin }: { isAdmin: boolean 
     }
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
 
   const refreshProviders = async () => {
     const r = await api.request<{ success: boolean; data: UserProvider[] }>("/providers");
@@ -134,9 +136,7 @@ export default function ProviderManagementPanel({ isAdmin }: { isAdmin: boolean 
     try {
       await Promise.all(
         targetProviders.map((p) => {
-          const endpoint = enable
-            ? `/providers/${p.id}/enable`
-            : `/providers/${p.id}/disable`;
+          const endpoint = enable ? `/providers/${p.id}/enable` : `/providers/${p.id}/disable`;
           return api.request(endpoint, { method: "POST" });
         }),
       );
@@ -153,7 +153,9 @@ export default function ProviderManagementPanel({ isAdmin }: { isAdmin: boolean 
   if (loading) {
     return (
       <div className="space-y-4">
-        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-32 w-full rounded-xl" />
+        ))}
       </div>
     );
   }
@@ -172,11 +174,7 @@ export default function ProviderManagementPanel({ isAdmin }: { isAdmin: boolean 
             <Label htmlFor="toggle-all" className="text-xs text-muted-foreground cursor-pointer">
               全部启用
             </Label>
-            <Switch
-              id="toggle-all"
-              checked={allEnabled}
-              onCheckedChange={(v) => toggleAll(v)}
-            />
+            <Switch id="toggle-all" checked={allEnabled} onCheckedChange={(v) => toggleAll(v)} />
           </div>
         </div>
       )}
@@ -184,8 +182,8 @@ export default function ProviderManagementPanel({ isAdmin }: { isAdmin: boolean 
         const up = upMap[provider.id];
         const isEnabled = !!up?.enabled;
         const credTypes: CredentialTypeConfig[] = provider.defineCredentialTypes?.() ?? [];
-        const credsForProvider = allCreds.filter(
-          (c) => credTypes.some((ct) => ct.value === c.provider),
+        const credsForProvider = allCreds.filter((c) =>
+          credTypes.some((ct) => ct.value === c.provider),
         );
 
         return (
@@ -200,10 +198,7 @@ export default function ProviderManagementPanel({ isAdmin }: { isAdmin: boolean 
                   <CardDescription>{provider.meta.description}</CardDescription>
                 </div>
                 {isAdmin && (
-                  <Switch
-                    checked={isEnabled}
-                    onCheckedChange={(v) => toggle(provider.id, v)}
-                  />
+                  <Switch checked={isEnabled} onCheckedChange={(v) => toggle(provider.id, v)} />
                 )}
               </div>
 
@@ -219,10 +214,7 @@ export default function ProviderManagementPanel({ isAdmin }: { isAdmin: boolean 
 
             {isEnabled && (
               <CardContent className="space-y-5 border-t pt-4">
-                <DomainSection
-                  hash={up?.hash}
-                  onRotate={() => rotateHash(provider.id)}
-                />
+                <DomainSection hash={up?.hash} onRotate={() => rotateHash(provider.id)} />
 
                 <CredentialListSection
                   provider={provider}
@@ -268,13 +260,30 @@ function GlobalPatSection({
       <Input
         className="h-7 text-xs flex-1"
         type="password"
-        placeholder={authMode === "basic" ? "Access Token" : authMode === "none" ? "Token (可选，用于私有库)" : "ghp_xxx / hf_xxx"}
+        placeholder={
+          authMode === "basic"
+            ? "Access Token"
+            : authMode === "none"
+              ? "Token (可选，用于私有库)"
+              : "ghp_xxx / hf_xxx"
+        }
         value={pat}
         onChange={(e) => setPat(e.target.value)}
       />
-      <Button size="sm" variant="outline" className="h-7 text-xs"
-        onClick={() => { if (pat) { onSave(pat, authMode === "basic" ? username : undefined); setPat(""); } }}
-        disabled={!pat}>保存</Button>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 text-xs"
+        onClick={() => {
+          if (pat) {
+            onSave(pat, authMode === "basic" ? username : undefined);
+            setPat("");
+          }
+        }}
+        disabled={!pat}
+      >
+        保存
+      </Button>
     </div>
   );
 }
@@ -353,7 +362,9 @@ function CredentialListSection({
                 try {
                   await credentials.update(c.id, { is_active: !c.is_active });
                   onRefresh();
-                } catch { toast.error("操作失败"); }
+                } catch {
+                  toast.error("操作失败");
+                }
               }}
               onDelete={() => {
                 toast(
@@ -361,23 +372,44 @@ function CredentialListSection({
                     <div className="text-sm">
                       <p className="mb-3">确定删除此凭据？不可撤销。</p>
                       <div className="flex gap-2 justify-end">
-                        <Button variant="ghost" size="sm" onClick={() => toast.dismiss(t.id)}>取消</Button>
-                        <Button variant="destructive" size="sm" onClick={async () => {
-                          toast.dismiss(t.id);
-                          try { await credentials.delete(c.id); toast.success("已删除"); onRefresh(); }
-                          catch { toast.error("删除失败"); }
-                        }}>删除</Button>
+                        <Button variant="ghost" size="sm" onClick={() => toast.dismiss(t.id)}>
+                          取消
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={async () => {
+                            toast.dismiss(t.id);
+                            try {
+                              await credentials.delete(c.id);
+                              toast.success("已删除");
+                              onRefresh();
+                            } catch {
+                              toast.error("删除失败");
+                            }
+                          }}
+                        >
+                          删除
+                        </Button>
                       </div>
                     </div>
-                  ), { duration: 8000 });
+                  ),
+                  { duration: 8000 },
+                );
               }}
             />
           ))}
         </div>
       )}
 
-      <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setDialogOpen(true)}>
-        <Plus size={12} className="mr-1" />添加凭据
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full text-xs"
+        onClick={() => setDialogOpen(true)}
+      >
+        <Plus size={12} className="mr-1" />
+        添加凭据
       </Button>
 
       <AddCredentialDialog
@@ -393,7 +425,10 @@ function CredentialListSection({
 
 // ---- 凭据行（显示注册源名称） ----
 function CredentialItem({
-  cred, credTypes, onToggle, onDelete,
+  cred,
+  credTypes,
+  onToggle,
+  onDelete,
 }: {
   cred: CredentialPublic;
   credTypes: CredentialTypeConfig[];
@@ -407,7 +442,10 @@ function CredentialItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-medium truncate">{cred.label || cred.username}</span>
-          <Badge variant={cred.is_active ? "default" : "secondary"} className="text-[10px] px-1.5 py-0 shrink-0">
+          <Badge
+            variant={cred.is_active ? "default" : "secondary"}
+            className="text-[10px] px-1.5 py-0 shrink-0"
+          >
             {cred.is_active ? "启用" : "禁用"}
           </Badge>
         </div>
@@ -419,7 +457,12 @@ function CredentialItem({
         </div>
       </div>
       <div className="flex items-center gap-0.5 shrink-0">
-        <Button variant="ghost" size="icon-xs" onClick={onToggle} title={cred.is_active ? "禁用" : "启用"}>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={onToggle}
+          title={cred.is_active ? "禁用" : "启用"}
+        >
           {cred.is_active ? <Power size={13} /> : <PowerOff size={13} />}
         </Button>
         <Button variant="ghost" size="icon-xs" onClick={onDelete} title="删除">
@@ -432,10 +475,17 @@ function CredentialItem({
 
 // ---- 添加凭据对话框（含注册源下拉） ----
 function AddCredentialDialog({
-  open, onClose, provider, credTypes, onSaved,
+  open,
+  onClose,
+  provider,
+  credTypes,
+  onSaved,
 }: {
-  open: boolean; onClose: () => void;
-  provider: any; credTypes: CredentialTypeConfig[]; onSaved: () => void;
+  open: boolean;
+  onClose: () => void;
+  provider: any;
+  credTypes: CredentialTypeConfig[];
+  onSaved: () => void;
 }) {
   const [registry, setRegistry] = useState(credTypes[0]?.value ?? "");
   const [label, setLabel] = useState("");
@@ -465,16 +515,25 @@ function AddCredentialDialog({
         secret,
       });
       toast.success("凭据已添加");
-      setLabel(""); setUsername(""); setSecret("");
+      setLabel("");
+      setUsername("");
+      setSecret("");
       onClose();
       onSaved();
     } catch (err) {
       toast.error((err as Error).message || "添加失败");
-    } finally { setSubmitting(false); }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>添加 {provider.displayName} 凭据</DialogTitle>
@@ -494,33 +553,52 @@ function AddCredentialDialog({
                 className="w-full"
               >
                 {credTypes.map((ct) => (
-                  <option key={ct.value} value={ct.value}>{ct.label}</option>
+                  <option key={ct.value} value={ct.value}>
+                    {ct.label}
+                  </option>
                 ))}
               </NativeSelect>
             </div>
           )}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">标签（可选）</Label>
-            <Input placeholder="例如: 个人账号" value={label}
-              onChange={(e) => setLabel(e.target.value)} />
+            <Input
+              placeholder="例如: 个人账号"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
           </div>
           {authMode === "basic" && (
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs">上游用户名 *</Label>
-              <Input placeholder="Docker Hub 用户名" value={username}
-                onChange={(e) => setUsername(e.target.value)} required />
+              <Input
+                placeholder="Docker Hub 用户名"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
             </div>
           )}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{authMode === "bearer" ? "Token / PAT *" : "Access Token *"}</Label>
-            <Input type="password"
+            <Label className="text-xs">
+              {authMode === "bearer" ? "Token / PAT *" : "Access Token *"}
+            </Label>
+            <Input
+              type="password"
               placeholder={authMode === "bearer" ? "ghp_xxx / hf_xxx" : "Access Token"}
-              value={secret} onChange={(e) => setSecret(e.target.value)} required />
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+              required
+            />
           </div>
           <Separator />
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>取消</Button>
-            <Button type="submit" disabled={submitting}>{submitting ? "保存中..." : "保存凭据"}</Button>
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+              取消
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "保存中..." : "保存凭据"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

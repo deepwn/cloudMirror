@@ -75,7 +75,10 @@ export class MavenProvider extends ProviderDefinition {
       descriptionShow: true,
       stats: [{ field: "stats.groupId", label: "Group" }],
       quickCommands: [
-        { label: "Maven", template: "group: {stats.groupId}  artifact: {title}  version: {subtitle}" },
+        {
+          label: "Maven",
+          template: "group: {stats.groupId}  artifact: {title}  version: {subtitle}",
+        },
         { label: "Gradle", template: "implementation '{g}:{a}:{v}'" },
       ],
       detailLink: "/detail?type=maven&target={id}",
@@ -84,8 +87,7 @@ export class MavenProvider extends ProviderDefinition {
 
   defineDetail(): DetailConfig {
     return {
-      infoEndpoint:
-        "https://search.maven.org/solrsearch/select?q=id:%22{target}%22&rows=1&wt=json",
+      infoEndpoint: "https://search.maven.org/solrsearch/select?q=id:%22{target}%22&rows=1&wt=json",
       infoMapping: {
         title: "response.docs[0].a",
         description: "response.docs[0].id",
@@ -111,7 +113,11 @@ export class MavenProvider extends ProviderDefinition {
       },
       detailUrlTemplate: "https://mvnrepository.com/artifact/{target}",
       quickConnects: [
-        { label: "Maven", template: "<dependency>\n  <groupId>{g}</groupId>\n  <artifactId>{a}</artifactId>\n  <version>{version}</version>\n</dependency>" },
+        {
+          label: "Maven",
+          template:
+            "<dependency>\n  <groupId>{g}</groupId>\n  <artifactId>{a}</artifactId>\n  <version>{version}</version>\n</dependency>",
+        },
         { label: "Gradle (Groovy)", template: "implementation '{g}:{a}:{version}'" },
         { label: "Gradle (Kotlin)", template: 'implementation("{g}:{a}:{version}")' },
       ],
@@ -138,10 +144,8 @@ export class MavenProvider extends ProviderDefinition {
 
   defineSetupGuide(): SetupGuideConfig {
     return {
-      summary:
-        "配置 Maven 或 Gradle 使用 cloudMirror 镜像加速依赖下载。",
-      quickCommand:
-        "mvn dependency:get -DremoteRepositories=https://{domain}/maven2",
+      summary: "配置 Maven 或 Gradle 使用 cloudMirror 镜像加速依赖下载。",
+      quickCommand: "mvn dependency:get -DremoteRepositories=https://{domain}/maven2",
       sections: [
         {
           title: "Maven (settings.xml)",
@@ -149,7 +153,7 @@ export class MavenProvider extends ProviderDefinition {
             {
               label: "全局或用户 settings.xml",
               value:
-                '<settings>\n  <mirrors>\n    <mirror>\n      <id>cloudmirror</id>\n      <mirrorOf>central</mirrorOf>\n      <url>https://{domain}/maven2</url>\n    </mirror>\n  </mirrors>\n</settings>',
+                "<settings>\n  <mirrors>\n    <mirror>\n      <id>cloudmirror</id>\n      <mirrorOf>central</mirrorOf>\n      <url>https://{domain}/maven2</url>\n    </mirror>\n  </mirrors>\n</settings>",
               mode: "block",
             },
           ],
@@ -171,7 +175,7 @@ export class MavenProvider extends ProviderDefinition {
             {
               label: "build.gradle.kts",
               value:
-                "repositories {\n    mavenCentral()\n    maven { url = uri(\"https://{domain}/maven2\") }\n}",
+                'repositories {\n    mavenCentral()\n    maven { url = uri("https://{domain}/maven2") }\n}',
               mode: "block",
             },
           ],
@@ -181,8 +185,7 @@ export class MavenProvider extends ProviderDefinition {
           items: [
             {
               label: "MAVEN_MIRROR_URL",
-              value:
-                'export MAVEN_MIRROR_URL=https://{domain}/maven2',
+              value: "export MAVEN_MIRROR_URL=https://{domain}/maven2",
               mode: "block",
             },
           ],
@@ -193,13 +196,13 @@ export class MavenProvider extends ProviderDefinition {
             {
               label: "GitHub Actions (Maven)",
               value:
-                '- name: Set up JDK\n  uses: actions/setup-java@v4\n  with:\n    java-version: \'21\'\n    distribution: \'temurin\'\n\n- name: Configure Maven mirror\n  run: |\n    mkdir -p ~/.m2\n    echo \'<settings><mirrors><mirror><id>cloudmirror</id><mirrorOf>central</mirrorOf><url>https://{domain}/maven2</url></mirror></mirrors></settings>\' > ~/.m2/settings.xml',
+                "- name: Set up JDK\n  uses: actions/setup-java@v4\n  with:\n    java-version: '21'\n    distribution: 'temurin'\n\n- name: Configure Maven mirror\n  run: |\n    mkdir -p ~/.m2\n    echo '<settings><mirrors><mirror><id>cloudmirror</id><mirrorOf>central</mirrorOf><url>https://{domain}/maven2</url></mirror></mirrors></settings>' > ~/.m2/settings.xml",
               mode: "block",
             },
             {
               label: "GitHub Actions (Gradle)",
               value:
-                '- name: Set up JDK\n  uses: actions/setup-java@v4\n  with:\n    java-version: \'21\'\n    distribution: \'temurin\'\n\n- name: Configure Gradle mirror\n  run: |\n    echo "allprojects { repositories { maven { url \'https://{domain}/maven2\' } } }" >> build.gradle',
+                "- name: Set up JDK\n  uses: actions/setup-java@v4\n  with:\n    java-version: '21'\n    distribution: 'temurin'\n\n- name: Configure Gradle mirror\n  run: |\n    echo \"allprojects { repositories { maven { url 'https://{domain}/maven2' } } }\" >> build.gradle",
               mode: "block",
             },
           ],

@@ -16,15 +16,18 @@ export interface DocsRenderContext {
 }
 
 /** 渲染 Provider 文档：自动派生章节 + prose 章节 */
-export function renderDocs(provider: ProviderDefinition, ctx: DocsRenderContext = {}): RenderedDocs {
+export function renderDocs(
+  provider: ProviderDefinition,
+  ctx: DocsRenderContext = {},
+): RenderedDocs {
   const docs = provider.docs();
   const domain = ctx.domain ?? "mirror.example.com";
   const hash = ctx.hash ?? "{hash}";
-  const sub = (t: string): string =>
-    t.replace(/\{hash\}/g, hash).replace(/\{domain\}/g, domain);
+  const sub = (t: string): string => t.replace(/\{hash\}/g, hash).replace(/\{domain\}/g, domain);
 
   const autoSections: DocsSection[] = [];
-  if (docs.auto?.proxyEndpoints !== false) autoSections.push(...deriveProxyEndpoints(provider, domain));
+  if (docs.auto?.proxyEndpoints !== false)
+    autoSections.push(...deriveProxyEndpoints(provider, domain));
   if (docs.auto?.searchApi !== false) autoSections.push(deriveSearchApi(provider));
   if (docs.auto?.credentials !== false) autoSections.push(deriveCredentials(provider));
   if (docs.auto?.quickConnects !== false) autoSections.push(deriveQuickConnects(provider));
@@ -51,19 +54,23 @@ function deriveProxyEndpoints(provider: ProviderDefinition, domain: string): Doc
         .map((r) => `| \`${r.prefix}\` | \`https://${domain}${r.prefix}\` | \`${r.upstream}\` |`)
         .join("\n")
     : `| 默认（全部路径） | \`https://${domain}/\` | \`${provider.upstream}\` |`;
-  return [{
-    title: "代理端点",
-    markdown: `本源的路径前缀在镜像域上的代理端点（CLI/工具直接请求原 API 路径即命中）：\n\n` +
-      `| 路径前缀 | 镜像端点 | 上游 |\n|---|---|---|\n${rows}\n\n` +
-      `默认上游：\`${provider.upstream}\``,
-  }];
+  return [
+    {
+      title: "代理端点",
+      markdown:
+        `本源的路径前缀在镜像域上的代理端点（CLI/工具直接请求原 API 路径即命中）：\n\n` +
+        `| 路径前缀 | 镜像端点 | 上游 |\n|---|---|---|\n${rows}\n\n` +
+        `默认上游：\`${provider.upstream}\``,
+    },
+  ];
 }
 
 /** 搜索 API 说明 */
 function deriveSearchApi(provider: ProviderDefinition): DocsSection {
   return {
     title: "搜索 API",
-    markdown: `- 搜索 API：\`${PLATFORM_API_PREFIX}/search?type=${provider.id}&q=<关键词>\`\n` +
+    markdown:
+      `- 搜索 API：\`${PLATFORM_API_PREFIX}/search?type=${provider.id}&q=<关键词>\`\n` +
       `- 详情 API：\`${PLATFORM_API_PREFIX}/detail?type=${provider.id}&target=<目标>\``,
   };
 }

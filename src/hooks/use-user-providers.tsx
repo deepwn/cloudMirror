@@ -71,11 +71,7 @@ export function UserProvidersProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("authchange", onAuthChange);
   }, [loadProviders]);
 
-  return (
-    <UserProvidersContext.Provider value={state}>
-      {children}
-    </UserProvidersContext.Provider>
-  );
+  return <UserProvidersContext.Provider value={state}>{children}</UserProvidersContext.Provider>;
 }
 
 export function useUserProviderHash(): {

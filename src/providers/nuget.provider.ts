@@ -87,8 +87,7 @@ export class NuGetProvider extends ProviderDefinition {
 
   defineDetail(): DetailConfig {
     return {
-      infoEndpoint:
-        "https://azuresearch-usnc.nuget.org/query?q=PackageId:{target}&take=1",
+      infoEndpoint: "https://azuresearch-usnc.nuget.org/query?q=PackageId:{target}&take=1",
       infoMapping: {
         title: "data[0].id",
         description: "data[0].description",
@@ -121,13 +120,11 @@ export class NuGetProvider extends ProviderDefinition {
       quickConnects: [
         {
           label: ".NET CLI",
-          template:
-            "dotnet add package {target} --source https://{domain}/v3/index.json",
+          template: "dotnet add package {target} --source https://{domain}/v3/index.json",
         },
         {
           label: "PackageReference",
-          template:
-            '<PackageReference Include="{target}" Version="{version}" />',
+          template: '<PackageReference Include="{target}" Version="{version}" />',
         },
       ],
       tabs: [
@@ -137,8 +134,7 @@ export class NuGetProvider extends ProviderDefinition {
           icon: { kind: "lucide", name: "Tag" },
           type: "table",
           dataSource: {
-            endpoint:
-              "https://azuresearch-usnc.nuget.org/query?q=PackageId:{target}&take=1",
+            endpoint: "https://azuresearch-usnc.nuget.org/query?q=PackageId:{target}&take=1",
             responsePath: "data[0].versions",
             columns: [
               { field: "version", label: "版本号" },
@@ -156,10 +152,8 @@ export class NuGetProvider extends ProviderDefinition {
 
   defineSetupGuide(): SetupGuideConfig {
     return {
-      summary:
-        "配置 NuGet 源指向 cloudMirror，加速 .NET 包安装。",
-      quickCommand:
-        "dotnet add package Newtonsoft.Json --source https://{domain}/v3/index.json",
+      summary: "配置 NuGet 源指向 cloudMirror，加速 .NET 包安装。",
+      quickCommand: "dotnet add package Newtonsoft.Json --source https://{domain}/v3/index.json",
       sections: [
         {
           title: "nuget.config (推荐)",
@@ -177,20 +171,17 @@ export class NuGetProvider extends ProviderDefinition {
           items: [
             {
               label: "添加源",
-              value:
-                "dotnet nuget add source https://{domain}/v3/index.json --name cloudmirror",
+              value: "dotnet nuget add source https://{domain}/v3/index.json --name cloudmirror",
               mode: "block",
             },
             {
               label: "禁用默认源",
-              value:
-                "dotnet nuget disable source nuget.org",
+              value: "dotnet nuget disable source nuget.org",
               mode: "inline",
             },
             {
               label: "单次使用",
-              value:
-                "dotnet add package {example} --source https://{domain}/v3/index.json",
+              value: "dotnet add package {example} --source https://{domain}/v3/index.json",
               mode: "inline",
             },
           ],

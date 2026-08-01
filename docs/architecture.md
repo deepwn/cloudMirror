@@ -32,23 +32,23 @@ flowchart LR
     D --> E[5. Docs 管理器注入]
 ```
 
-| 层 | 含义 | 载体 |
-|---|------|------|
-| 1. 子域名定义 | 每个 `(user, provider)` 一个独立 `{hash}.mirror.example.com` | `worker/router.ts` `resolveRoute()` |
-| 2. Routes 重新代理 | 把上游路径映射到镜像子域，按前缀路由到不同上游 host | `_base.ts` `proxy` 配置（routes/hooks） |
-| 3. 中间件处置 | 鉴权（PAT 注入）、search 映射、CORS、限流、审计 | `handleProxy` 默认管线 + `worker/index.ts` 门控 |
-| 4. 路径节点暴露 | CLI 直连的原 API 路径集合 | `proxy.routes`、`fetch.ts` 白名单（声明派生） |
-| 5. Docs 管理器 | 面向用户的安装/使用文档 | `Docs.tsx` 消费 `renderDocs()` |
+| 层                 | 含义                                                         | 载体                                            |
+| ------------------ | ------------------------------------------------------------ | ----------------------------------------------- |
+| 1. 子域名定义      | 每个 `(user, provider)` 一个独立 `{hash}.mirror.example.com` | `worker/router.ts` `resolveRoute()`             |
+| 2. Routes 重新代理 | 把上游路径映射到镜像子域，按前缀路由到不同上游 host          | `_base.ts` `proxy` 配置（routes/hooks）         |
+| 3. 中间件处置      | 鉴权（PAT 注入）、search 映射、CORS、限流、审计              | `handleProxy` 默认管线 + `worker/index.ts` 门控 |
+| 4. 路径节点暴露    | CLI 直连的原 API 路径集合                                    | `proxy.routes`、`fetch.ts` 白名单（声明派生）   |
+| 5. Docs 管理器     | 面向用户的安装/使用文档                                      | `Docs.tsx` 消费 `renderDocs()`                  |
 
 ### 1.2 三态路由（核心约束）
 
 worker 对每个请求按 **hostname + 路径前缀** 做三态判定，**子域判定必须优先**：
 
-| 态 | 判定 | 归属 |
-|---|------|------|
-| **代理** | 子域 `{hash}.mirror.example.com/*` | Provider 路由表 |
-| **平台 API** | 裸域 + `/cloudmirror-api/v1/*` | 平台自身 |
-| **前端页面** | 裸域 + 其余路径 | SPA |
+| 态           | 判定                               | 归属            |
+| ------------ | ---------------------------------- | --------------- |
+| **代理**     | 子域 `{hash}.mirror.example.com/*` | Provider 路由表 |
+| **平台 API** | 裸域 + `/cloudmirror-api/v1/*`     | 平台自身        |
+| **前端页面** | 裸域 + 其余路径                    | SPA             |
 
 > **关键不变量**：代理路由表中的 `prefix` 是**上游路径**（如 cargo `/api/v1/`），平台 API 前缀是**平台命名空间**（`/cloudmirror-api/v1`）。子域只走代理态，裸域 `/cloudmirror-api/*` 只走平台态，二者永不相交。路由默认将**完整路径**拼接到路由上游（镜像路径 == 上游路径）；当上游路径布局与镜像不同（如 `raw.githubusercontent.com`、`index.crates.io` 为根路径）时，用 `stripPrefix: true` 剥离前缀后再拼接。
 
@@ -123,12 +123,12 @@ flowchart TD
 
 分页模式（`SearchConfig.pagination`）：
 
-| 模式 | 参数 | 适用 |
-|------|------|------|
-| `page` | `?page=N&per_page=M` | cargo、packagist |
-| `offset` | `?size=M&from=(N-1)*M` | npm、maven、nuget |
-| `none` | 仅页大小，page 恒 1 | gomod（token 分页不可回溯） |
-| `token` | 预留 | — |
+| 模式     | 参数                   | 适用                        |
+| -------- | ---------------------- | --------------------------- |
+| `page`   | `?page=N&per_page=M`   | cargo、packagist            |
+| `offset` | `?size=M&from=(N-1)*M` | npm、maven、nuget           |
+| `none`   | 仅页大小，page 恒 1    | gomod（token 分页不可回溯） |
+| `token`  | 预留                   | —                           |
 
 ### 2.4 路径 D：详情管线
 
@@ -205,16 +205,16 @@ sequenceDiagram
 
 ## 3. 核心组件与职责
 
-| 组件 | 文件 | 职责 |
-|------|------|------|
-| `ProviderDefinition` | `src/providers/_base.ts` | 抽象基类：代理/搜索/详情默认管线 + render/validateContract/docs 聚合 |
-| `ProviderManager` | `src/providers/manager.ts` | 注册管理器：register/use/get/all/searchable/metas/onRegister/validate |
-| `registry.ts` | `src/providers/registry.ts` | 注册链（manager.register 14 个源）+ 兼容导出 |
-| `docs-manager.ts` | `src/providers/docs-manager.ts` | 文档自动派生 + prose 合并 |
-| `shared/api.ts` | `src/shared/api.ts` | `PLATFORM_API_PREFIX` + `platformApi()` 单一事实源 |
-| `shared/types.ts` | `src/shared/types.ts` | 全部契约类型（SDK v2 声明式配置 + RenderContract + Docs） |
-| `worker/router.ts` | `src/worker/router.ts` | 子域解析 + PAT 解密 |
-| `worker/api/*` | `src/worker/api/` | 平台 API 端点（search/detail/fetch/providers/auth/admin...） |
+| 组件                 | 文件                            | 职责                                                                  |
+| -------------------- | ------------------------------- | --------------------------------------------------------------------- |
+| `ProviderDefinition` | `src/providers/_base.ts`        | 抽象基类：代理/搜索/详情默认管线 + render/validateContract/docs 聚合  |
+| `ProviderManager`    | `src/providers/manager.ts`      | 注册管理器：register/use/get/all/searchable/metas/onRegister/validate |
+| `registry.ts`        | `src/providers/registry.ts`     | 注册链（manager.register 14 个源）+ 兼容导出                          |
+| `docs-manager.ts`    | `src/providers/docs-manager.ts` | 文档自动派生 + prose 合并                                             |
+| `shared/api.ts`      | `src/shared/api.ts`             | `PLATFORM_API_PREFIX` + `platformApi()` 单一事实源                    |
+| `shared/types.ts`    | `src/shared/types.ts`           | 全部契约类型（SDK v2 声明式配置 + RenderContract + Docs）             |
+| `worker/router.ts`   | `src/worker/router.ts`          | 子域解析 + PAT 解密                                                   |
+| `worker/api/*`       | `src/worker/api/`               | 平台 API 端点（search/detail/fetch/providers/auth/admin...）          |
 
 ---
 
@@ -260,27 +260,27 @@ sequenceDiagram
 
 ## 5. 关键不变量与校验
 
-| # | 不变量 | 强制位置 |
-|---|--------|---------|
-| 1 | 子域判定先于平台 API 判定（三态路由顺序） | `worker/index.ts` |
-| 2 | Provider id 全局唯一 | `manager.register` 抛错 |
-| 3 | 端点协议必须 `https://` | `validateContract()` |
-| 4 | 端点 host 不得为 IP/内网保留段（SSRF） | `validateContract()`（覆盖 upstream/proxy.routes/search/detail） |
-| 5 | 搜索结果 id 唯一性（CRIT-2 防护） | `doSearch` 默认管线（warn） |
-| 6 | hook 抛错不击穿管线（502/空结果降级） | `handleProxy`/`doSearch` 默认管线 |
-| 7 | `detail.infoEndpoint` 及 tab 端点必须用 `{target}` 而非 `{id}` | `validateContract()` |
-| 8 | 平台 API 路径统一经 `platformApi()` 派生 | `shared/api.ts` + `/site-info` |
+| #   | 不变量                                                         | 强制位置                                                         |
+| --- | -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | 子域判定先于平台 API 判定（三态路由顺序）                      | `worker/index.ts`                                                |
+| 2   | Provider id 全局唯一                                           | `manager.register` 抛错                                          |
+| 3   | 端点协议必须 `https://`                                        | `validateContract()`                                             |
+| 4   | 端点 host 不得为 IP/内网保留段（SSRF）                         | `validateContract()`（覆盖 upstream/proxy.routes/search/detail） |
+| 5   | 搜索结果 id 唯一性（CRIT-2 防护）                              | `doSearch` 默认管线（warn）                                      |
+| 6   | hook 抛错不击穿管线（502/空结果降级）                          | `handleProxy`/`doSearch` 默认管线                                |
+| 7   | `detail.infoEndpoint` 及 tab 端点必须用 `{target}` 而非 `{id}` | `validateContract()`                                             |
+| 8   | 平台 API 路径统一经 `platformApi()` 派生                       | `shared/api.ts` + `/site-info`                                   |
 
 ---
 
 ## 6. 测试基准
 
-| 层 | 文件 | 覆盖 |
-|----|------|------|
-| manager | `provider-sdk.baseline.test.ts` | 注册去重 / validate 全过 / render 聚合 / docs 可用 |
+| 层       | 文件                            | 覆盖                                                                 |
+| -------- | ------------------------------- | -------------------------------------------------------------------- |
+| manager  | `provider-sdk.baseline.test.ts` | 注册去重 / validate 全过 / render 聚合 / docs 可用                   |
 | pipeline | `provider-sdk.pipeline.test.ts` | 代理管线（路由匹配/hooks/502 降级）、搜索管线（分页参数）、SSRF 校验 |
-| render | `provider-sdk.baseline.test.ts` | 契约完整性（itemsPath/detailLink/infoEndpoint/credentialTypes） |
-| e2e | `worker/__tests__/api/*` | auth/credentials 集成（URL 为 `/cloudmirror-api/v1`） |
+| render   | `provider-sdk.baseline.test.ts` | 契约完整性（itemsPath/detailLink/infoEndpoint/credentialTypes）      |
+| e2e      | `worker/__tests__/api/*`        | auth/credentials 集成（URL 为 `/cloudmirror-api/v1`）                |
 
 当前基线：`vitest run src/providers` **58 项全过**；全量 **138 项全过**（lint/typecheck/test/build 均绿）。
 
@@ -288,8 +288,8 @@ sequenceDiagram
 
 ## 7. 文档地图
 
-| 文档 | 定位 | 维护 |
-|------|------|------|
-| **`architecture.md`（本文）** | 当前架构唯一权威基准 | 随架构演进更新 |
-| `development.md` | 开发规范（环境/代码规范/测试/贡献流程） | 规范变更时更新 |
-| `README.md` | 项目介绍与部署指南 | 发布/部署变更时更新 |
+| 文档                          | 定位                                    | 维护                |
+| ----------------------------- | --------------------------------------- | ------------------- |
+| **`architecture.md`（本文）** | 当前架构唯一权威基准                    | 随架构演进更新      |
+| `development.md`              | 开发规范（环境/代码规范/测试/贡献流程） | 规范变更时更新      |
+| `README.md`                   | 项目介绍与部署指南                      | 发布/部署变更时更新 |

@@ -129,7 +129,12 @@ export const authHandlers: AuthHandlers = {
     clearLoginAttempts(clientIp, body.username);
     await logAudit(env.DB, "login_success", { actorId: user.id, actorIp: clientIp, actorUa: ua });
 
-    const token = await signJwt({ sub: user.id, role: user.role }, env.JWT_SECRET, 604800, user.token_version ?? 0);
+    const token = await signJwt(
+      { sub: user.id, role: user.role },
+      env.JWT_SECRET,
+      604800,
+      user.token_version ?? 0,
+    );
     await createSession(env.DB, user.id, user.token_version ?? 0, clientIp, ua);
     return makeRes(
       JSON.stringify({
@@ -196,7 +201,12 @@ export const authHandlers: AuthHandlers = {
       detail: "register",
     });
 
-    const token = await signJwt({ sub: user.id, role: user.role }, env.JWT_SECRET, 604800, user.token_version ?? 0);
+    const token = await signJwt(
+      { sub: user.id, role: user.role },
+      env.JWT_SECRET,
+      604800,
+      user.token_version ?? 0,
+    );
     await createSession(env.DB, user.id, user.token_version ?? 0, clientIp, ua);
     return makeRes(
       JSON.stringify({
@@ -337,8 +347,10 @@ export const authHandlers: AuthHandlers = {
     if (!user) return makeRes(JSON.stringify({ error: "unauthorized" }), 401);
 
     const providers = await env.DB.prepare(
-      "SELECT id, provider, hash FROM user_providers WHERE user_id = ?"
-    ).bind(user.id).all<{ id: string; provider: string; hash: string }>();
+      "SELECT id, provider, hash FROM user_providers WHERE user_id = ?",
+    )
+      .bind(user.id)
+      .all<{ id: string; provider: string; hash: string }>();
 
     const rotated: Record<string, string> = {};
     for (const up of providers.results) {
@@ -396,7 +408,12 @@ export const authHandlers: AuthHandlers = {
     const pwHash = await hashPassword(body.password);
     const user = await createUser(env.DB, body.username, pwHash, "admin", body.email);
 
-    const token = await signJwt({ sub: user.id, role: user.role }, env.JWT_SECRET, 604800, user.token_version ?? 0);
+    const token = await signJwt(
+      { sub: user.id, role: user.role },
+      env.JWT_SECRET,
+      604800,
+      user.token_version ?? 0,
+    );
     await createSession(env.DB, user.id, user.token_version ?? 0, getIP(request), getUA(request));
     return makeRes(
       JSON.stringify({
@@ -421,7 +438,12 @@ export const authHandlers: AuthHandlers = {
     if (!user) return makeRes(JSON.stringify({ error: "unauthorized" }), 401);
 
     const newVersion = await incrementTokenVersion(env.DB, user.id);
-    const token = await signJwt({ sub: user.id, role: user.role }, env.JWT_SECRET, 604800, newVersion);
+    const token = await signJwt(
+      { sub: user.id, role: user.role },
+      env.JWT_SECRET,
+      604800,
+      newVersion,
+    );
 
     const clientIp = getIP(request);
     const ua = getUA(request);

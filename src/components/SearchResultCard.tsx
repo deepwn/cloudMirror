@@ -8,14 +8,7 @@ import { useUserProviderHash } from "../hooks/use-user-providers";
 import type { GenericSearchItem } from "@shared/types";
 import { fmtNum } from "../lib/format";
 import { interpolateTemplate } from "../shared/utils/template";
-import {
-  Star,
-  GitFork,
-  Heart,
-  Download,
-  User,
-  Package,
-} from "lucide-react";
+import { Star, GitFork, Heart, Download, User, Package } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Card, CardContent } from "./ui/card";
 import CodeBlock from "./CodeBlock";
@@ -31,7 +24,9 @@ const STAT_ICONS: Record<string, React.ComponentType<{ size?: number; className?
   likes: Heart,
 };
 
-function resolveStatIcon(label: string): React.ComponentType<{ size?: number; className?: string }> | null {
+function resolveStatIcon(
+  label: string,
+): React.ComponentType<{ size?: number; className?: string }> | null {
   // 精确匹配
   if (STAT_ICONS[label]) return STAT_ICONS[label];
   // 模糊匹配：包含关键词
@@ -39,9 +34,19 @@ function resolveStatIcon(label: string): React.ComponentType<{ size?: number; cl
   if (lower.includes("stars")) return Star;
   if (lower.includes("fork")) return GitFork;
   if (lower.includes("like") || lower.includes("赞")) return Heart;
-  if (lower.includes("下载") || lower.includes("download") || lower.includes("pull") || lower.includes("pulls"))
+  if (
+    lower.includes("下载") ||
+    lower.includes("download") ||
+    lower.includes("pull") ||
+    lower.includes("pulls")
+  )
     return Download;
-  if (lower.includes("作者") || lower.includes("author") || lower.includes("group") || lower.includes("owner"))
+  if (
+    lower.includes("作者") ||
+    lower.includes("author") ||
+    lower.includes("group") ||
+    lower.includes("owner")
+  )
     return User;
   if (lower.includes("package") || lower.includes("版本数") || lower.includes("version"))
     return Package;
@@ -77,8 +82,7 @@ export default function SearchResultCard({ item }: { item: GenericSearchItem }) 
     stats: statValues,
   };
 
-  const sub = (tpl: string) =>
-    interpolateTemplate(tpl, templateContext);
+  const sub = (tpl: string) => interpolateTemplate(tpl, templateContext);
 
   const getStat = (field: string) => {
     const key = field.startsWith("stats.") ? field.slice(6) : field;
@@ -114,9 +118,7 @@ export default function SearchResultCard({ item }: { item: GenericSearchItem }) 
               })}
             </h3>
             {card.descriptionShow && item.description && (
-              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                {item.description}
-              </p>
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
             )}
           </div>
 

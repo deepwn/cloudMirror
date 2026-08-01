@@ -139,8 +139,7 @@ export class PackagistProvider extends ProviderDefinition {
         },
         {
           label: "composer.json (手工)",
-          template:
-            '{\n  "require": {\n    "{target}": "^{version}"\n  }\n}',
+          template: '{\n  "require": {\n    "{target}": "^{version}"\n  }\n}',
         },
       ],
       tabs: [
@@ -150,8 +149,7 @@ export class PackagistProvider extends ProviderDefinition {
           icon: { kind: "lucide", name: "Tag" },
           type: "table",
           dataSource: {
-            endpoint:
-              "https://packagist.org/packages/{target}.json",
+            endpoint: "https://packagist.org/packages/{target}.json",
             responsePath: "package.versions",
             // versions 是 {{version}: {name,version,type,dist,source,...}} 对象
             columns: [
@@ -167,24 +165,20 @@ export class PackagistProvider extends ProviderDefinition {
 
   defineSetupGuide(): SetupGuideConfig {
     return {
-      summary:
-        "配置 Composer 使用 cloudMirror 镜像加速 PHP 依赖安装。",
-      quickCommand:
-        "composer config repos.packagist composer https://{domain}",
+      summary: "配置 Composer 使用 cloudMirror 镜像加速 PHP 依赖安装。",
+      quickCommand: "composer config repos.packagist composer https://{domain}",
       sections: [
         {
           title: "Composer CLI (推荐)",
           items: [
             {
               label: "全局配置镜像",
-              value:
-                "composer config --global repos.packagist composer https://{domain}",
+              value: "composer config --global repos.packagist composer https://{domain}",
               mode: "block",
             },
             {
               label: "当前项目配置",
-              value:
-                "composer config repos.packagist composer https://{domain}",
+              value: "composer config repos.packagist composer https://{domain}",
               mode: "block",
             },
           ],
@@ -211,8 +205,7 @@ export class PackagistProvider extends ProviderDefinition {
             },
             {
               label: "Dockerfile",
-              value:
-                "RUN composer config repos.packagist composer https://{domain}",
+              value: "RUN composer config repos.packagist composer https://{domain}",
               mode: "block",
             },
           ],

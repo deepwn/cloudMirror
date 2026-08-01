@@ -2,7 +2,14 @@
 // src/worker/db.ts — D1 查询封装
 // ============================================================================
 
-import type { User, Credential, UserLimits, DailyUsage, UserProvider, ProviderSetting } from "../shared/types";
+import type {
+  User,
+  Credential,
+  UserLimits,
+  DailyUsage,
+  UserProvider,
+  ProviderSetting,
+} from "../shared/types";
 import { randomHex } from "./crypto";
 
 function uuid(): string {
@@ -40,7 +47,10 @@ export async function getUserByUsername(db: D1Database, username: string): Promi
 async function generateUniqueHash(db: D1Database): Promise<string> {
   for (let i = 0; i < 5; i++) {
     const hash = randomHex(16);
-    const existing = await db.prepare("SELECT id FROM user_providers WHERE hash = ?").bind(hash).first();
+    const existing = await db
+      .prepare("SELECT id FROM user_providers WHERE hash = ?")
+      .bind(hash)
+      .first();
     if (!existing) return hash;
   }
   throw new Error("Failed to generate unique hash after 5 attempts");
@@ -78,10 +88,7 @@ export async function updateUser(
   db: D1Database,
   id: string,
   fields: Partial<
-    Pick<
-      User,
-      "username" | "password" | "role" | "status" | "email" | "note" | "deleted_at"
-    >
+    Pick<User, "username" | "password" | "role" | "status" | "email" | "note" | "deleted_at">
   >,
 ): Promise<void> {
   const sets: string[] = [];
@@ -657,10 +664,7 @@ export async function getUserProviderByHash(
   return row ?? null;
 }
 
-export async function getUserProviders(
-  db: D1Database,
-  userId: string,
-): Promise<UserProvider[]> {
+export async function getUserProviders(db: D1Database, userId: string): Promise<UserProvider[]> {
   const result = await db
     .prepare("SELECT * FROM user_providers WHERE user_id = ?")
     .bind(userId)
@@ -692,12 +696,8 @@ export async function getProviderSetting(
   return row ?? null;
 }
 
-export async function getAllProviderSettings(
-  db: D1Database,
-): Promise<ProviderSetting[]> {
-  const result = await db
-    .prepare("SELECT * FROM provider_settings")
-    .all<ProviderSetting>();
+export async function getAllProviderSettings(db: D1Database): Promise<ProviderSetting[]> {
+  const result = await db.prepare("SELECT * FROM provider_settings").all<ProviderSetting>();
   return result.results;
 }
 
@@ -709,9 +709,7 @@ export async function createUserProvider(
   const id = uuid();
   const hash = await generateUniqueHash(db);
   await db
-    .prepare(
-      "INSERT INTO user_providers (id, user_id, provider, hash) VALUES (?, ?, ?, ?)",
-    )
+    .prepare("INSERT INTO user_providers (id, user_id, provider, hash) VALUES (?, ?, ?, ?)")
     .bind(id, userId, provider, hash)
     .run();
   return (await db
@@ -855,22 +853,35 @@ export async function createSession(
 export async function getSessions(
   db: D1Database,
   userId: string,
-): Promise<Array<{ id: string; client_ip: string | null; client_ua: string | null; is_current: number; created_at: string }>> {
+): Promise<
+  Array<{
+    id: string;
+    client_ip: string | null;
+    client_ua: string | null;
+    is_current: number;
+    created_at: string;
+  }>
+> {
   const result = await db
     .prepare(
       "SELECT id, client_ip, client_ua, is_current, created_at FROM sessions WHERE user_id = ? AND token_version = (SELECT token_version FROM users WHERE id = ?) ORDER BY is_current DESC, created_at DESC",
     )
     .bind(userId, userId)
-    .all<{ id: string; client_ip: string | null; client_ua: string | null; is_current: number; created_at: string }>();
+    .all<{
+      id: string;
+      client_ip: string | null;
+      client_ua: string | null;
+      is_current: number;
+      created_at: string;
+    }>();
   return result.results;
 }
 
-export async function incrementTokenVersion(
-  db: D1Database,
-  userId: string,
-): Promise<number> {
+export async function incrementTokenVersion(db: D1Database, userId: string): Promise<number> {
   await db
-    .prepare("UPDATE users SET token_version = token_version + 1, updated_at = datetime('now') WHERE id = ?")
+    .prepare(
+      "UPDATE users SET token_version = token_version + 1, updated_at = datetime('now') WHERE id = ?",
+    )
     .bind(userId)
     .run();
   const row = await db
@@ -880,10 +891,7 @@ export async function incrementTokenVersion(
   return row?.token_version ?? 0;
 }
 
-export async function pruneOldSessions(
-  db: D1Database,
-  userId: string,
-): Promise<void> {
+export async function pruneOldSessions(db: D1Database, userId: string): Promise<void> {
   await db
     .prepare(
       "DELETE FROM sessions WHERE user_id = ? AND token_version < (SELECT token_version FROM users WHERE id = ?)",

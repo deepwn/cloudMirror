@@ -22,7 +22,9 @@ export interface RepositoryReadmeResult {
  * 从 repository 字段解析上游 Git 仓库，返回 README 内容与 docBase。
  * 支持 GitHub / GitLab。解析失败或仓库不可达返回 null。
  */
-export async function fetchRepositoryReadme(repoUrl: string): Promise<RepositoryReadmeResult | null> {
+export async function fetchRepositoryReadme(
+  repoUrl: string,
+): Promise<RepositoryReadmeResult | null> {
   if (!repoUrl) return null;
 
   // GitHub: https://github.com/{owner}/{repo}/... 或 https://github.com/{owner}/{repo}
@@ -35,7 +37,7 @@ export async function fetchRepositoryReadme(repoUrl: string): Promise<Repository
         headers: { "User-Agent": "CloudMirror/4.0", Accept: "application/vnd.github.v3+json" },
       });
       if (res.ok) {
-        const data = await res.json() as { content?: string; encoding?: string };
+        const data = (await res.json()) as { content?: string; encoding?: string };
         if (data.content && data.encoding === "base64") {
           const decoded = decodeBase64Content(data.content);
           if (decoded !== null) {
@@ -46,7 +48,9 @@ export async function fetchRepositoryReadme(repoUrl: string): Promise<Repository
           }
         }
       }
-    } catch { /* github readme failed */ }
+    } catch {
+      /* github readme failed */
+    }
   }
 
   // GitLab: https://gitlab.com/{group}/{repo}
@@ -63,7 +67,9 @@ export async function fetchRepositoryReadme(repoUrl: string): Promise<Repository
           docBase: `https://gitlab.com/${group}/${repo}/-/raw/HEAD/`,
         };
       }
-    } catch { /* gitlab readme failed */ }
+    } catch {
+      /* gitlab readme failed */
+    }
   }
 
   return null;

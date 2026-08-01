@@ -51,10 +51,7 @@ export default function ProviderIcon({
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
-        <path
-          d={candidate.path}
-          fill={useColor ? `#${candidate.hex}` : "currentColor"}
-        />
+        <path d={candidate.path} fill={useColor ? `#${candidate.hex}` : "currentColor"} />
       </svg>
     );
   }

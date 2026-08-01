@@ -16,8 +16,8 @@
 // ============================================================================
 
 const MAX_IMAGE_BYTES = 1024 * 1024; // 单图字节上限 1MB
-const MAX_IMAGES = 8;                // 最多内嵌张数
-const CONCURRENCY = 4;               // fetch 并发
+const MAX_IMAGES = 8; // 最多内嵌张数
+const CONCURRENCY = 4; // fetch 并发
 
 /** 允许的图片类型（raster + svg；svg 仅在 <img> 内安全） */
 const IMAGE_TYPES = new Set([
@@ -99,7 +99,9 @@ async function fetchAsDataUrl(abs: URL): Promise<string | null> {
     if (res.url) {
       try {
         if (isSuspiciousHostname(new URL(res.url).hostname)) return null;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     }
     const ct = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
     if (!IMAGE_TYPES.has(ct)) return null;

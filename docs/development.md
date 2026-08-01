@@ -4,22 +4,22 @@
 
 ## 环境
 
-| 工具 | 版本要求 |
-| --- | --- |
-| Node.js | ≥ 20 |
-| Yarn | 1.x（`packageManager` 已锁定） |
-| TypeScript | 5.x（`strict: true`） |
+| 工具       | 版本要求                       |
+| ---------- | ------------------------------ |
+| Node.js    | ≥ 20                           |
+| Yarn       | 1.x（`packageManager` 已锁定） |
+| TypeScript | 5.x（`strict: true`）          |
 
 ## 目录约定
 
-| 目录 | 职责 | 约束 |
-| --- | --- | --- |
-| `src/providers/` | Provider SDK（基类 + 各源 + manager） | 每个源一个 `<name>.provider.ts`，禁止向 `_base.ts` 添加跨源知识 |
-| `src/worker/` | Worker 后端（入口/路由/API/D1/鉴权） | 平台 API 统一前缀 `/cloudmirror-api/v1` |
-| `src/components/` | 前端 UI 组件 | shadcn/ui 源码直接放 `ui/` |
-| `src/pages/` | 前端页面 | 页面编排组件，不直接 fetch 上游 |
-| `src/shared/` | 前后端共享 | 类型、API 常量（`PLATFORM_API_PREFIX`）、纯工具 |
-| `docs/` | 架构与规范文档 | 变更同步更新 |
+| 目录              | 职责                                  | 约束                                                            |
+| ----------------- | ------------------------------------- | --------------------------------------------------------------- |
+| `src/providers/`  | Provider SDK（基类 + 各源 + manager） | 每个源一个 `<name>.provider.ts`，禁止向 `_base.ts` 添加跨源知识 |
+| `src/worker/`     | Worker 后端（入口/路由/API/D1/鉴权）  | 平台 API 统一前缀 `/cloudmirror-api/v1`                         |
+| `src/components/` | 前端 UI 组件                          | shadcn/ui 源码直接放 `ui/`                                      |
+| `src/pages/`      | 前端页面                              | 页面编排组件，不直接 fetch 上游                                 |
+| `src/shared/`     | 前后端共享                            | 类型、API 常量（`PLATFORM_API_PREFIX`）、纯工具                 |
+| `docs/`           | 架构与规范文档                        | 变更同步更新                                                    |
 
 ## 代码规范
 
