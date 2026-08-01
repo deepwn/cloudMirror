@@ -118,6 +118,8 @@ export class HuggingFaceProvider extends ProviderDefinition {
           dataSource: {
             endpoint: "https://huggingface.co/{target}/raw/main/README.md",
             responseType: "text",
+            // README 相对图片基于仓库 main 分支 raw 路径（后端内嵌为 data URL）
+            docBase: "https://huggingface.co/{target}/raw/main/",
           } },
       ],
     };

@@ -8,6 +8,7 @@
 // Supports: GFM tables/tasklists/strikethrough, Math (KaTeX), raw HTML in README,
 //           YAML frontmatter skip, fenced code blocks with syntax highlighting.
 // XSS-safe: rehypeSanitize runs last, all on* handlers & script/iframe stripped.
+// 排版：github-markdown-css（markdown-body）；图片已由后端内嵌为 data URL，前端直接渲染。
 // ============================================================================
 
 import { useMemo } from "react";
@@ -164,24 +165,8 @@ const README_SCHEMA: RehypeSanitizeOptions = {
   },
 };
 
-/** Compose a component map with image rewriting support */
-function makeComponents(baseUrl?: string): Components {
-  const isPlaceholder = baseUrl?.includes("{hash}") ?? false;
-
-  const resolveSrc = (src: string | undefined) => {
-    if (!src) return src;
-    // already absolute — leave as-is
-    if (/^https?:\/\//i.test(src)) return src;
-    // not logged in — keep relative, will be broken but that's expected
-    if (!baseUrl || isPlaceholder) return src;
-    // relative or root-relative — join with baseUrl (proxy)
-    try {
-      return new URL(src, baseUrl).href;
-    } catch {
-      return src;
-    }
-  };
-
+/** 组件映射：图片直接渲染（后端已内嵌 data URL / 保留原 URL），统一尺寸规范 */
+function makeComponents(): Components {
   return {
     code({ className, children, ...props }) {
       const match = /language-(\w+)/.exec(className || "");
@@ -212,48 +197,31 @@ function makeComponents(baseUrl?: string): Components {
         </a>
       );
     },
-    img({ src, alt }) {
-      const resolved = resolveSrc(src);
-      // relative image without proxy — show login placeholder
-      if (!/^https?:\/\//i.test(resolved || "")) {
-        return (
-          <div className="my-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-6 text-center">
-            <p className="text-xs text-muted-foreground">
-              {isPlaceholder ? "登录后可查看图片" : `图片 · ${alt || resolved || ""}`}
-            </p>
-          </div>
-        );
-      }
-      return <img src={resolved} alt={alt} className="max-w-full rounded-lg my-2" loading="lazy" />;
+    img({ src, alt, ...props }) {
+      // data URL（后端内嵌）或保留的绝对 URL 直接渲染；markdown-body 统一 max-width 规范
+      return <img src={src} alt={alt} loading="lazy" className="max-w-full h-auto rounded-md" {...props} />;
     },
     table({ children }) {
+      // 横向滚动容器，防止宽表格溢出；表格样式由 markdown-body 统一
       return (
         <div className="overflow-x-auto my-3">
-          <table className="min-w-full border-collapse border text-xs">{children}</table>
+          <table>{children}</table>
         </div>
       );
-    },
-    th({ children }) {
-      return <th className="border bg-muted px-3 py-1.5 text-left font-semibold">{children}</th>;
-    },
-    td({ children }) {
-      return <td className="border px-3 py-1.5">{children}</td>;
     },
   };
 }
 
 export default function Markdown({
   content,
-  baseUrl,
   className = "",
 }: {
   content: string;
-  baseUrl?: string;
   className?: string;
 }) {
   if (!content) return null;
 
-  const components = useMemo(() => makeComponents(baseUrl), [baseUrl]);
+  const components = useMemo(() => makeComponents(), []);
 
   // 跳过 YAML frontmatter (HF model cards 常见)
   let cleanContent = content;
@@ -265,7 +233,7 @@ export default function Markdown({
   }
 
   return (
-    <div className={`prose prose-sm max-w-none dark:prose-invert ${className}`}>
+    <div className={`markdown-body text-sm ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkFrontmatter, remarkMath]}
         remarkRehypeOptions={{ allowDangerousHtml: true }}

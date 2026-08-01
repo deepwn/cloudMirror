@@ -11,6 +11,7 @@ import type {
 } from "../shared/types";
 import { getByPath } from "../shared/utils/json-path";
 import { decodeBase64Content } from "./utils/base64";
+import { inlineMarkdownImages } from "./utils/inline-markdown-images";
 
 // ============================================================================
 // ProviderDefinition
@@ -418,6 +419,16 @@ export abstract class ProviderDefinition {
           }
         }
       } catch { /* tab fetch failed, use null data */ }
+
+      // markdown tab：后端解析相对图片并内嵌为 data URL（安全边界见 utils/inline-markdown-images.ts）
+      if (
+        tabConfig.type === "markdown" &&
+        typeof data === "string" &&
+        tabConfig.dataSource.docBase
+      ) {
+        const docBase = tabConfig.dataSource.docBase.replace(/\{target\}/g, epTarget);
+        data = await inlineMarkdownImages(data, docBase);
+      }
 
       const tab: DetailTabData = {
         id: tabConfig.id,

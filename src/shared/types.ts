@@ -331,6 +331,12 @@ export interface TabConfig {
     responsePath?: string;
     /** 显式响应解码方式（如 GitHub readme 的 base64）。缺省不解码。 */
     decode?: "base64";
+    /**
+     * 文档基础 URL 模板（支持 {target}），type=markdown 时用于后端解析 markdown 中的相对图片
+     * 并内嵌为 data URL（见 src/providers/utils/inline-markdown-images.ts）。
+     * 如 github README 相对图片基于 "https://raw.githubusercontent.com/{target}/HEAD/"。
+     */
+    docBase?: string;
     columns?: {
       field: string;
       label: string;
