@@ -90,7 +90,7 @@ export default function SearchResultCard({ item }: { item: GenericSearchItem }) 
   return (
     <Card
       onClick={() => navigate(sub(card.detailLink))}
-      className="w-full cursor-pointer text-left transition-shadow hover:shadow-sm"
+      className="w-full cursor-pointer text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.99]"
     >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">

@@ -2,7 +2,7 @@
 // GenericDetail — v1.0: 通用详情页，所有 Provider 共用
 // ============================================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useProvider } from "../hooks/use-provider";
@@ -47,6 +47,24 @@ function DetailContent({ type, target }: { type: string; target: string }) {
   const hash = getHash(type);
   const domain = getDomain(type);
   const provider = useProvider(type);
+
+  // 追踪上一个 tab：渲染期间 ref 仍是旧值、activeTab 已是新值，
+  // 据此判断切换方向 → 前进(右滑入) / 后退(左滑入)；首次/未知方向时仅淡入
+  const prevTabRef = useRef<string>("");
+  const tabIds = detail?.tabs.map((t) => t.id) ?? [];
+  const prevTabIdx = tabIds.indexOf(prevTabRef.current);
+  const activeTabIdx = tabIds.indexOf(activeTab);
+  const tabDirection =
+    prevTabIdx === -1 || activeTabIdx === -1
+      ? null
+      : activeTabIdx > prevTabIdx
+        ? "right"
+        : "left";
+
+  // 渲染完成后同步参考值，供下一次切换比较
+  useEffect(() => {
+    if (prevTabRef.current !== activeTab) prevTabRef.current = activeTab;
+  }, [activeTab]);
 
   useEffect(() => {
     setLoading(true);
@@ -151,7 +169,7 @@ function DetailContent({ type, target }: { type: string; target: string }) {
 
       {detail.tabs.length > 0 && (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList variant="line" className="w-fit">
             {detail.tabs.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="gap-1.5">
                 {tab.icon && <ProviderIcon icon={tab.icon} size={14} />}
@@ -160,8 +178,19 @@ function DetailContent({ type, target }: { type: string; target: string }) {
             ))}
           </TabsList>
           {detail.tabs.map((tab) => (
-            <TabsContent key={tab.id} value={tab.id}>
-              <StaticTabRenderer tab={tab} />
+            <TabsContent
+              key={tab.id}
+              value={tab.id}
+              // tab 切换：按方向水平滑入 + 淡入（前进=右侧进入，后退=左侧进入）
+              className={
+                tabDirection === "right"
+                  ? "animate-in fade-in slide-in-from-right-2 duration-200 ease-out"
+                  : tabDirection === "left"
+                    ? "animate-in fade-in slide-in-from-left-2 duration-200 ease-out"
+                    : "animate-in fade-in duration-200 ease-out"
+              }
+            >
+              <StaticTabRenderer tab={tab} hash={hash} domain={domain} target={target} />
             </TabsContent>
           ))}
         </Tabs>

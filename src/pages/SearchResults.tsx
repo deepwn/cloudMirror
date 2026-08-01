@@ -28,6 +28,9 @@ export default function SearchResults() {
   const activeType = rawType;
 
   const [inputValue, setInputValue] = useState(q);
+  // 待提交的 provider 类型：切换下拉仅改本地状态（placeholder 即时更新），
+  // 点击搜索/回车才随 q 一起提交（不触发即时搜索）
+  const [pendingType, setPendingType] = useState(activeType);
   const [results, setResults] = useState<GenericSearchItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -35,10 +38,13 @@ export default function SearchResults() {
   const cacheRef = useRef<Map<string, { results: GenericSearchItem[]; total: number }>>(new Map());
   const cacheKey = `${q}_${activeType}_${page}`;
 
-  const provider = useProvider(activeType);
+  // placeholder 跟随下拉选择即时变化（展示用），实际搜索提交时用 pendingType
+  const provider = useProvider(pendingType || activeType);
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
   useEffect(() => { setInputValue(q); }, [q]);
+  // URL 变化（分页/外部导航）时同步待提交类型，避免残留过期选择
+  useEffect(() => { setPendingType(activeType); }, [activeType]);
 
   useEffect(() => {
     if (!q) return;
@@ -63,7 +69,7 @@ export default function SearchResults() {
     if (e && "preventDefault" in e) e.preventDefault();
     const val = inputValue.trim();
     if (!val) return;
-    navigate(`/search?q=${encodeURIComponent(val)}&type=${activeType}`);
+    navigate(`/search?q=${encodeURIComponent(val)}&type=${pendingType}`);
   };
 
   const goPage = (p: number) => {
@@ -93,8 +99,8 @@ export default function SearchResults() {
               <InputGroupAddon align="inline-start">
                 <SearchProviderPicker
                   providers={allProviders}
-                  activeId={activeType}
-                  onChange={(t) => navigate(`/search?q=${encodeURIComponent(inputValue.trim() || q)}&type=${t}`)}
+                  activeId={pendingType}
+                  onChange={(t) => setPendingType(t)}
                 />
               </InputGroupAddon>
               <InputGroupInput
@@ -139,7 +145,14 @@ export default function SearchResults() {
         <>
           <div className="space-y-3 mt-2">
             {results.map((item, i) => (
-              <SearchResultCard key={item.id || String(i)} item={item} />
+              <div
+                key={item.id || String(i)}
+                // 交错入场：淡入 + 轻微上滑，错峰 40ms 制造级联感
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out"
+                style={{ animationDelay: `${Math.min(i * 40, 400)}ms` }}
+              >
+                <SearchResultCard item={item} />
+              </div>
             ))}
           </div>
 

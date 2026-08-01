@@ -89,6 +89,19 @@ export class ProviderManager {
     return issues;
   }
 
+  /**
+   * 清空全部 Provider 与监听。
+   * 用于幂等注册：dev HMR 下 vite 重新执行 registry.ts 前调用，
+   * 避免 manager 模块被缓存复用导致重复注册抛错
+   * （@cloudflare/vite-plugin 会在任意文件变更时重载 worker-entry）。
+   * 生产构建本模块只执行一次，无副作用。
+   */
+  clear(): this {
+    this.providers.clear();
+    this.listeners.clear();
+    return this;
+  }
+
   private normalize(input: ProviderInput): ProviderDefinition {
     if (typeof input === "function") {
       return new (input as new () => ProviderDefinition)();

@@ -149,6 +149,10 @@ export class GitHubProvider extends ProviderDefinition {
             // README 相对图片基于默认分支 raw 路径（后端内嵌为 data URL）
             docBase: "https://raw.githubusercontent.com/{target}/HEAD/",
           } },
+        { id: "releases", label: "Releases", icon: { kind: "lucide", name: "Package" }, type: "releases",
+          dataSource: {
+            endpoint: "https://api.github.com/repos/{target}/releases?per_page=20",
+          } },
       ],
     };
   }

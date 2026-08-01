@@ -21,7 +21,11 @@ import { cpanProvider } from "./cpan.provider";
 import { dartProvider } from "./dart.provider";
 import { cranProvider } from "./cran.provider";
 
+// 幂等注册：dev HMR 下 @cloudflare/vite-plugin 会重新执行本模块（worker-entry
+// 全量 reload），而 manager 模块可能被缓存复用（旧实例已含全部 Provider）。
+// 先 clear 再注册，避免 duplicate 抛错；生产构建本模块只执行一次，无副作用。
 manager
+  .clear()
   .register(githubProvider)
   .register(dockerProvider)
   .register(huggingfaceProvider)

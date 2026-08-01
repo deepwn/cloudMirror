@@ -340,12 +340,14 @@ export default function Markdown({
         )}
       </div>
       {isLong && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-2 text-xs text-primary hover:underline cursor-pointer"
-        >
-          {expanded ? "收起" : "展开全部"}
-        </button>
+        <div className="mt-2 flex justify-center">
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-primary hover:underline cursor-pointer"
+          >
+            {expanded ? "收起" : "展开全部"}
+          </button>
+        </div>
       )}
     </div>
   );

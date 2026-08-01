@@ -26,9 +26,9 @@ export default function SearchProviderPicker({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex h-7 items-center gap-1.5 rounded-md px-2 text-sm text-foreground outline-none transition-colors hover:bg-muted">
+      <DropdownMenuTrigger className="flex h-7 items-center gap-1.5 rounded-md px-2 text-sm text-foreground outline-none transition-all duration-200 hover:bg-muted/70 hover:text-foreground active:scale-95 data-[popup-open]:bg-muted/70">
         <ProviderIcon icon={active.meta.icon} size={15} />
-        <ChevronDown size={14} className="text-muted-foreground" />
+        <ChevronDown size={14} className="text-muted-foreground transition-transform duration-200 data-[popup-open]:rotate-180" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56">
         <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">
@@ -43,7 +43,12 @@ export default function SearchProviderPicker({
               <DropdownMenuItem key={provider.id} onClick={() => onChange(provider.id)} className="gap-2.5">
                 <ProviderIcon icon={provider.meta.icon} size={15} monochrome={!isActive} />
                 <span className="min-w-0 flex-1 truncate">{provider.displayName}</span>
-                {isActive && <Check size={14} className="text-primary" />}
+                {isActive && (
+                  <Check
+                    size={14}
+                    className="animate-in zoom-in-75 fade-in duration-150 text-primary"
+                  />
+                )}
               </DropdownMenuItem>
             );
           })}

@@ -323,7 +323,7 @@ export interface TabConfig {
   id: string;
   label: string;
   icon?: ProviderIconSpec;
-  type: "markdown" | "table" | "keyValue" | "code";
+  type: "markdown" | "table" | "keyValue" | "code" | "releases";
   language?: string;
   dataSource: {
     endpoint: string;
@@ -385,7 +385,7 @@ export interface DetailTabData {
   /** Tab 图标 */
   icon?: ProviderIconSpec;
   /** 内容类型 */
-  type: "markdown" | "table" | "keyValue" | "code";
+  type: "markdown" | "table" | "keyValue" | "code" | "releases";
   /** 代码语言（type=code 时） */
   language?: string;
   /** 已解析的数据 */
