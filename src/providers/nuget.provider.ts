@@ -15,7 +15,8 @@ import type {
 
 export class NuGetProvider extends ProviderDefinition {
   readonly id = "nuget";
-  readonly upstream = "https://api.nuget.org/v3";
+  // 根路径：用户配置 https://{domain}/v3/index.json，代理拼接 path 后直达 api.nuget.org/v3/...
+  readonly upstream = "https://api.nuget.org";
   readonly authMode = "none" as const;
 
   readonly meta: ProviderMeta = {

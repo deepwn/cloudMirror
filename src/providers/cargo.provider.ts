@@ -32,13 +32,38 @@ export class CargoProvider extends ProviderDefinition {
     enabled: true,
   };
 
-  // ---- 代理（SDK v2：下载 CDN 路由） ----
+  // ---- 代理（SDK v2：下载 CDN 路由 + sparse index 转发 + download URL 重写） ----
   readonly proxy: ProxyConfig = {
     defaultUpstream: "https://static.crates.io",
     routes: [
+      // sparse index：/api/v1/crates/xxx → index.crates.io/xxx（stripPrefix 剥离前缀，index 为根路径）
+      { prefix: "/api/v1/crates/", upstream: "https://index.crates.io", stripPrefix: true },
+      // crates.io API（搜索等）
       { prefix: "/api/v1/", upstream: "https://crates.io" },
-      { prefix: "/crates/", upstream: "https://crates.io" },
+      // crate 文件下载 CDN（路径含 /crates/ 前缀，原样拼接）
+      { prefix: "/crates/", upstream: "https://static.crates.io" },
     ],
+    hooks: {
+      onBuildRequest: (ctx) => {
+        // sparse index 响应需重写 download URL，请求未压缩文本便于处理
+        if (new URL(ctx.request.url).pathname.startsWith("/api/v1/crates/")) {
+          ctx.headers.delete("Accept-Encoding");
+        }
+      },
+      onSend: async (ctx) => {
+        const url = new URL(ctx.request.url);
+        if (!url.pathname.startsWith("/api/v1/crates/")) return;
+        const res = ctx.response!;
+        const text = await res.text();
+        // index.crates.io 返回的 download 字段为 https://static.crates.io/... 绝对链接，
+        // 重写为 mirror host，保证 crate 文件下载走代理（/crates/ → static.crates.io）
+        const rewritten = text.replaceAll("https://static.crates.io", `https://${url.host}`);
+        const headers = new Headers(res.headers);
+        headers.delete("content-encoding");
+        headers.delete("content-length");
+        ctx.response = new Response(rewritten, { status: res.status, headers });
+      },
+    },
   };
 
   // ---- 搜索（声明式） ----

@@ -51,12 +51,33 @@ export class PyPIProvider extends ProviderDefinition {
     enabled: true,
   };
 
-  // ---- 代理（SDK v2：文件 CDN 路由） ----
+  // ---- 代理（SDK v2：文件 CDN 路由 + /simple HTML 链接重写） ----
   readonly proxy: ProxyConfig = {
     routes: [
       { prefix: "/packages/", upstream: "https://files.pythonhosted.org" },
       { prefix: "/files/", upstream: "https://files.pythonhosted.org" },
     ],
+    hooks: {
+      onBuildRequest: (ctx) => {
+        // /simple 索引 HTML 需重写文件 URL，请求未压缩文本便于处理
+        if (new URL(ctx.request.url).pathname.startsWith("/simple/")) {
+          ctx.headers.delete("Accept-Encoding");
+        }
+      },
+      onSend: async (ctx) => {
+        const url = new URL(ctx.request.url);
+        if (!url.pathname.startsWith("/simple/")) return;
+        const res = ctx.response!;
+        const text = await res.text();
+        // PyPI simple 索引中的文件链接为 https://files.pythonhosted.org/... 绝对 URL，
+        // 重写为 mirror host，保证包文件下载走代理（/packages/ → files.pythonhosted.org）
+        const rewritten = text.replaceAll("https://files.pythonhosted.org", `https://${url.host}`);
+        const headers = new Headers(res.headers);
+        headers.delete("content-encoding");
+        headers.delete("content-length");
+        ctx.response = new Response(rewritten, { status: res.status, headers });
+      },
+    },
   };
 
   async doSearch(query: string, page: number, pageSize: number, _pat?: string): Promise<GenericSearchResponse | null> {

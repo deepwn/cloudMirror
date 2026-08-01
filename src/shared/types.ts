@@ -438,6 +438,11 @@ export interface ProxyRoute {
   prefix: string;
   upstream: string;
   exposeHeaders?: boolean;
+  /**
+   * true 时剥离 prefix 再拼接到上游（上游路径布局与镜像不同，如 raw.githubusercontent.com / index.crates.io）。
+   * 缺省 false：完整路径拼接（镜像路径 == 上游路径）。
+   */
+  stripPrefix?: boolean;
 }
 
 /** 代理管线上下文（hook 只改 ctx，不直接改方法签名） */

@@ -27,8 +27,11 @@ export class GitHubProvider extends ProviderDefinition {
   // ---- 代理（SDK v2：路由表 + hooks，见 docs §5.3.1） ----
   readonly proxy: ProxyConfig = {
     routes: [
-      { prefix: "/raw/", upstream: "https://raw.githubusercontent.com" },
-      { prefix: "/api/", upstream: "https://api.github.com" },
+      // raw 文件：/raw/user/repo/main/file → raw.githubusercontent.com/user/repo/main/file（剥离 /raw/）
+      { prefix: "/raw/", upstream: "https://raw.githubusercontent.com", stripPrefix: true },
+      // API：/api/repos/... → api.github.com/repos/...（剥离 /api/）
+      { prefix: "/api/", upstream: "https://api.github.com", stripPrefix: true },
+      // repos API 直通：/repos/... → api.github.com/repos/...（路径一致，原样拼接）
       { prefix: "/repos/", upstream: "https://api.github.com" },
     ],
     exposeHeaders: true,

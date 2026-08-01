@@ -15,7 +15,8 @@ import type {
 
 export class MavenProvider extends ProviderDefinition {
   readonly id = "maven";
-  readonly upstream = "https://repo1.maven.org/maven2";
+  // 根路径：用户配置 https://{domain}/maven2，代理拼接 path 后直达 repo1.maven.org/maven2/...
+  readonly upstream = "https://repo1.maven.org";
   readonly authMode = "none" as const;
 
   readonly meta: ProviderMeta = {

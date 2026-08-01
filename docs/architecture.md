@@ -50,7 +50,7 @@ worker 对每个请求按 **hostname + 路径前缀** 做三态判定，**子域
 | **平台 API** | 裸域 + `/cloudmirror-api/v1/*` | 平台自身 |
 | **前端页面** | 裸域 + 其余路径 | SPA |
 
-> **关键不变量**：代理路由表中的 `prefix` 是**上游路径**（如 cargo `/api/v1/`），平台 API 前缀是**平台命名空间**（`/cloudmirror-api/v1`）。子域只走代理态，裸域 `/cloudmirror-api/*` 只走平台态，二者永不相交。
+> **关键不变量**：代理路由表中的 `prefix` 是**上游路径**（如 cargo `/api/v1/`），平台 API 前缀是**平台命名空间**（`/cloudmirror-api/v1`）。子域只走代理态，裸域 `/cloudmirror-api/*` 只走平台态，二者永不相交。路由默认将**完整路径**拼接到路由上游（镜像路径 == 上游路径）；当上游路径布局与镜像不同（如 `raw.githubusercontent.com`、`index.crates.io` 为根路径）时，用 `stripPrefix: true` 剥离前缀后再拼接。
 
 ### 1.3 分层原则
 
@@ -89,7 +89,7 @@ parseHostname(hostname) ? 代理
 flowchart TD
     REQ[子域请求] --> R[resolveRoute<br/>hash → user_providers → provider_settings → PAT 解密]
     R --> P[handleProxy 默认管线]
-    P --> O1[onResolve<br/>路由表最长前缀匹配 → target]
+    P --> O1[onResolve<br/>路由表最长前缀匹配（可选 stripPrefix）→ target]
     O1 --> O2[onBuildRequest<br/>默认头 + PAT 注入 + hook 改写]
     O2 --> F[(fetch 上游)]
     F --> O3[onSend<br/>CORS 头 + hook 改写响应]
@@ -100,6 +100,7 @@ flowchart TD
 代码：`src/providers/_base.ts` `handleProxy()`
 
 - 默认管线阶段：`onResolve → 默认头构建 → onBuildRequest → fetch → onSend → 输出`
+- 路由表：最长前缀优先；`stripPrefix: true` 时剥离匹配前缀再拼接到路由上游（上游为根路径布局的场景）
 - 逃生舱：特殊 Provider 仍可整体覆写 `handleProxy`
 - 审计日志（fire-and-forget）由 `worker/index.ts` 写入
 
@@ -281,7 +282,7 @@ sequenceDiagram
 | render | `provider-sdk.baseline.test.ts` | 契约完整性（itemsPath/detailLink/infoEndpoint/credentialTypes） |
 | e2e | `worker/__tests__/api/*` | auth/credentials 集成（URL 为 `/cloudmirror-api/v1`） |
 
-当前基线：`vitest run src/providers` **30 项全过**；全量 107 过 / 3 既有失败（crypto 空密码、auth register 模式，与 SDK 无关）。
+当前基线：`vitest run src/providers` **39 项全过**；全量 **119 项全过**（lint/typecheck/test/build 均绿）。
 
 ---
 

@@ -74,7 +74,8 @@ export class FooProvider extends ProviderDefinition {
 readonly proxy: ProxyConfig = {
   routes: [
     { prefix: "/api/", upstream: "https://api.foo.example" },
-    { prefix: "/raw/", upstream: "https://raw.foo.example" },
+    // 上游为根路径布局时用 stripPrefix: true（剥离前缀再拼接，如 raw.githubusercontent.com）
+    { prefix: "/raw/", upstream: "https://raw.foo.example", stripPrefix: true },
   ],
   exposeHeaders: true,
   hooks: {

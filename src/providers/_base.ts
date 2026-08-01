@@ -6,7 +6,7 @@ import type {
   ProviderMeta, GenericSearchItem, GenericSearchResponse,
   ResultMapping, ResultCardConfig, DetailConfig, DetailData, DetailTabData,
   SetupGuideConfig, PopularSearch, ResolvedRoute, MetaFieldsConfig,
-  ProxyConfig, ProxyContext, SearchConfig, SearchContext,
+  ProxyConfig, ProxyContext, ProxyRoute, SearchConfig, SearchContext,
   DetailContext, RenderContract, ProviderDocs, DocsSection,
 } from "../shared/types";
 import { getByPath } from "../shared/utils/json-path";
@@ -64,11 +64,19 @@ export abstract class ProviderDefinition {
 
     try {
       // 1. onResolve：路由表最长前缀匹配 + hook 改写 target
-      let best: { prefix: string; upstream: string; exposeHeaders?: boolean } | undefined;
+      let best: ProxyRoute | undefined;
       for (const r of proxy.routes ?? []) {
         if (path.startsWith(r.prefix) && (!best || r.prefix.length > best.prefix.length)) best = r;
       }
-      if (best) ctx.target = best.upstream + path + url.search;
+      if (best) {
+        // stripPrefix: 剥离前缀再拼接到上游（镜像路径与上游路径布局不同的场景）
+        let rest = path;
+        if (best.stripPrefix) {
+          rest = path.slice(best.prefix.length);
+          if (!rest.startsWith("/")) rest = "/" + rest;
+        }
+        ctx.target = best.upstream + rest + url.search;
+      }
       await proxy.hooks?.onResolve?.(ctx);
 
       // 2. 默认头 + onBuildRequest（可改写 headers/target/body）

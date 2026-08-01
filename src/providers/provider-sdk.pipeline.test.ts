@@ -71,9 +71,23 @@ describe("proxy pipeline (SDK v2)", () => {
 
     expect(res.status).toBe(200);
     const call = fetchMock.mock.calls[0];
-    expect(String(call[0])).toMatch(/^https:\/\/raw\.githubusercontent\.com\/raw\/user\/repo\/file\.txt/);
+    // stripPrefix: /raw/ 剥离后转发到 raw.githubusercontent.com 根路径
+    expect(String(call[0])).toMatch(/^https:\/\/raw\.githubusercontent\.com\/user\/repo\/file\.txt/);
     const headers = (call[1] as RequestInit).headers as Headers;
     expect(headers.get("Accept")).toBe("application/vnd.github.v3+json");
+  });
+
+  it("github: /api/ 路由剥离前缀转发到 api.github.com", async () => {
+    const github = getProvider("github")!;
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => new Response("ok", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/api/repos/user/repo/releases/latest");
+    await github.handleProxy(req, {
+      userId: "u", providerType: "github", pat: null, patUsername: null,
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "https://api.github.com/repos/user/repo/releases/latest");
   });
 
   it("github: LFS 路径注入 git-lfs Accept", async () => {
@@ -112,6 +126,88 @@ describe("proxy pipeline (SDK v2)", () => {
       userId: "u", providerType: "boom-test", pat: null, patUsername: null,
     });
     expect(res.status).toBe(502);
+  });
+
+  it("cargo: sparse index 转发到 index.crates.io 且重写 download URL", async () => {
+    const cargo = getProvider("cargo")!;
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+      new Response(JSON.stringify({ dl: "https://static.crates.io/crates/serde/serde-1.0.219.crate" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/api/v1/crates/se/rd/serde");
+    const res = await cargo.handleProxy(req, {
+      userId: "u", providerType: "cargo", pat: null, patUsername: null,
+    });
+
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://index.crates.io/se/rd/serde");
+    const body = await res.text();
+    expect(body).toContain("https://abc123.mirror.example.com/crates/serde/serde-1.0.219.crate");
+    expect(body).not.toContain("https://static.crates.io");
+  });
+
+  it("cargo: 文件下载路由转发到 static.crates.io", async () => {
+    const cargo = getProvider("cargo")!;
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+      new Response("binary", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/crates/serde/serde-1.0.219.crate");
+    await cargo.handleProxy(req, {
+      userId: "u", providerType: "cargo", pat: null, patUsername: null,
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "https://static.crates.io/crates/serde/serde-1.0.219.crate");
+  });
+
+  it("nuget: /v3/index.json 转发到 api.nuget.org/v3（无双重 /v3）", async () => {
+    const nuget = getProvider("nuget")!;
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+      new Response(JSON.stringify({ resources: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/v3/index.json");
+    await nuget.handleProxy(req, {
+      userId: "u", providerType: "nuget", pat: null, patUsername: null,
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://api.nuget.org/v3/index.json");
+  });
+
+  it("maven: /maven2 路径转发到 repo1.maven.org（无双重 /maven2）", async () => {
+    const maven = getProvider("maven")!;
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+      new Response("<project/>", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/maven2/junit/junit/4.13.2/junit-4.13.2.pom");
+    await maven.handleProxy(req, {
+      userId: "u", providerType: "maven", pat: null, patUsername: null,
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.pom");
+  });
+
+  it("pypi: /simple HTML 重写文件链接到 mirror host", async () => {
+    const pypi = getProvider("pypi")!;
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+      new Response(
+        '<html><a href="https://files.pythonhosted.org/packages/xx/six-1.16.0-py2.py3-none-any.whl">six-1.16.0.whl</a></html>',
+        { status: 200, headers: { "Content-Type": "text/html" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/simple/six/");
+    const res = await pypi.handleProxy(req, {
+      userId: "u", providerType: "pypi", pat: null, patUsername: null,
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://pypi.org/simple/six/");
+    const body = await res.text();
+    expect(body).toContain("https://abc123.mirror.example.com/packages/xx/six-1.16.0-py2.py3-none-any.whl");
+    expect(body).not.toContain("https://files.pythonhosted.org");
   });
 });
 
