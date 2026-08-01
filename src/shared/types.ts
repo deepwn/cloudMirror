@@ -332,8 +332,8 @@ export interface TabConfig {
     /** 显式响应解码方式（如 GitHub readme 的 base64）。缺省不解码。 */
     decode?: "base64";
     /**
-     * 文档基础 URL 模板（支持 {target}），type=markdown 时用于后端解析 markdown 中的相对图片
-     * 并内嵌为 data URL（见 src/providers/utils/inline-markdown-images.ts）。
+     * 文档基础 URL 模板（支持 {target}），type=markdown 时用于派生 DetailTabData.baseUrl，
+     * 前端据此将相对资源解析为原始绝对 URL 直接加载（不做代理）。
      * 如 github README 相对图片基于 "https://raw.githubusercontent.com/{target}/HEAD/"。
      */
     docBase?: string;
@@ -392,6 +392,11 @@ export interface DetailTabData {
   data: unknown;
   /** 表格列配置（type=table 时） */
   columns?: { field: string; label: string; format?: string; emptyText?: string }[];
+  /**
+   * 文档基础 URL（type=markdown 时，由 dataSource.docBase 模板渲染 {target} 得到）。
+   * 前端据此将 markdown 中的相对资源解析为原始绝对 URL 直接加载（不做代理）。
+   */
+  baseUrl?: string;
 }
 
 /** 统一详情 API 响应 */

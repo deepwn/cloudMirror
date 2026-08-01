@@ -11,7 +11,7 @@ export interface RepositoryReadmeResult {
   /** README 内容（markdown） */
   content: string;
   /**
-   * README 所在目录的 raw base URL（相对图片解析基准，传给 inlineMarkdownImages）。
+   * README 所在目录的 raw base URL（相对资源解析基准，供前端 DetailTabData.baseUrl）。
    * GitHub: https://raw.githubusercontent.com/{owner}/{repo}/HEAD/
    * GitLab: https://gitlab.com/{group}/{repo}/-/raw/HEAD/
    */

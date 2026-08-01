@@ -11,7 +11,6 @@ import type {
 } from "../shared/types";
 import { getByPath } from "../shared/utils/json-path";
 import { decodeBase64Content } from "./utils/base64";
-import { inlineMarkdownImages } from "./utils/inline-markdown-images";
 
 // ============================================================================
 // ProviderDefinition
@@ -420,16 +419,6 @@ export abstract class ProviderDefinition {
         }
       } catch { /* tab fetch failed, use null data */ }
 
-      // markdown tab：后端解析相对图片并内嵌为 data URL（安全边界见 utils/inline-markdown-images.ts）
-      if (
-        tabConfig.type === "markdown" &&
-        typeof data === "string" &&
-        tabConfig.dataSource.docBase
-      ) {
-        const docBase = tabConfig.dataSource.docBase.replace(/\{target\}/g, epTarget);
-        data = await inlineMarkdownImages(data, docBase);
-      }
-
       const tab: DetailTabData = {
         id: tabConfig.id,
         label: tabConfig.label,
@@ -438,6 +427,11 @@ export abstract class ProviderDefinition {
         language: tabConfig.language,
         data,
         columns: tabConfig.dataSource.columns,
+        // markdown 文档基础 URL（相对资源解析依据），由 provider 声明 docBase 模板渲染；
+        // 前端据此将相对路径解析为原始绝对 URL 直接加载（不做代理）
+        baseUrl: tabConfig.dataSource.docBase
+          ? tabConfig.dataSource.docBase.replace(/\{target\}/g, epTarget)
+          : undefined,
       };
       detail.tabs.push(tab);
       if (config.hooks?.onTabResolved) await config.hooks.onTabResolved(dctx, tab);

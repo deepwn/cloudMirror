@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Card, CardContent } from "./ui/card";
-import CopyField from "./CopyField";
+import CodeBlock from "./CodeBlock";
 
 // ---- stat label → icon 映射 ----
 const STAT_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -138,8 +138,9 @@ export default function SearchResultCard({ item }: { item: GenericSearchItem }) 
         </div>
 
         {card.quickCommands[0] && (
-          <CopyField
-            value={sub(card.quickCommands[0].template)}
+          <CodeBlock
+            code={sub(card.quickCommands[0].template)}
+            variant="inline"
             className="mt-2"
             inputClassName="text-xs text-muted-foreground"
             ariaLabel={`复制${card.quickCommands[0].label}命令`}

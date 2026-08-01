@@ -4,7 +4,6 @@
 
 import { ProviderDefinition } from "./_base";
 import { fetchRepositoryReadme } from "./utils/fetch-readme";
-import { inlineMarkdownImages } from "./utils/inline-markdown-images";
 import { getByPath } from "../shared/utils/json-path";
 import type {
   ProviderMeta,
@@ -159,18 +158,16 @@ export class DartProvider extends ProviderDefinition {
           } },
       ],
       // SDK v2：从 info 元数据提取 repository 拉取上游 README 注入 readme tab（原 getDetail 覆写迁移）。
-      // README 来自 GitHub/GitLab 仓库，docBase 需运行时从 repository 派生；
-      // 注入时同步内嵌相对图片（onInfoFetched 在 tab 图片内嵌之后执行，故此处再内嵌一次）。
+      // README 来自 GitHub/GitLab 仓库，baseUrl 需运行时从 repository 派生，供前端解析相对资源。
       hooks: {
         onInfoFetched: async (ctx) => {
           const repoUrl = String(getByPath(ctx.rawInfo ?? {}, "latest.pubspec.repository") ?? "");
           if (repoUrl) {
             const result = await fetchRepositoryReadme(repoUrl);
             if (result) {
-              const readme = await inlineMarkdownImages(result.content, result.docBase);
               ctx.detail.tabs = ctx.detail.tabs.map((t) =>
                 t.id === "readme"
-                  ? { ...t, type: "markdown", data: readme, language: undefined }
+                  ? { ...t, type: "markdown", data: result.content, language: undefined, baseUrl: result.docBase }
                   : t,
               );
             }

@@ -8,10 +8,12 @@
 // Supports: GFM tables/tasklists/strikethrough, Math (KaTeX), raw HTML in README,
 //           YAML frontmatter skip, fenced code blocks with syntax highlighting.
 // XSS-safe: rehypeSanitize runs last, all on* handlers & script/iframe stripped.
-// 排版：github-markdown-css（markdown-body）；图片已由后端内嵌为 data URL，前端直接渲染。
+// 排版：github-markdown-css（markdown-body）。
+// 图片：直接渲染原始 URL（相对路径基于 baseUrl 解析；github blob 规范化为 raw），
+//       loading="lazy" + onError 占位；超长内容默认限高折叠，可展开。
 // ============================================================================
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -165,25 +167,44 @@ const README_SCHEMA: RehypeSanitizeOptions = {
   },
 };
 
-/** 组件映射：图片直接渲染（后端已内嵌 data URL / 保留原 URL），统一尺寸规范 */
-function makeComponents(): Components {
-  return {
-    code({ className, children, ...props }) {
-      const match = /language-(\w+)/.exec(className || "");
-      const code = String(children).replace(/\n$/, "");
-      if (match && code.includes("\n")) {
-        return (
-          <div className="my-3">
-            <CodeBlock code={code} lang={match[1]} title={match[1]} />
-          </div>
-        );
-      }
-      return (
-        <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono" {...props}>
-          {children}
-        </code>
-      );
-    },
+/** github blob/raw 页面链接 → raw.githubusercontent.com 直接文件 URL（同后端工具规则） */
+function normalizeGithubUrl(src: string): string {
+  const blobMatch = src.match(/^https:\/\/github\.com\/([^/]+)\/([^/#?]+)\/blob\/([^/#?]+)\/(.+)$/);
+  if (blobMatch) {
+    const [, owner, repo, branch, path] = blobMatch;
+    return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path.split("?")[0]}`;
+  }
+  const rawMatch = src.match(/^https:\/\/github\.com\/([^/]+)\/([^/#?]+)\/raw\/([^/#?]+)\/(.+)$/);
+  if (rawMatch) {
+    const [, owner, repo, branch, path] = rawMatch;
+    return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path.split("?")[0]}`;
+  }
+  return src;
+}
+
+/** 将图片 src 解析为可直接加载的绝对 URL（相对基于 baseUrl，github blob 规范化） */
+function resolveImageSrc(src: string, baseUrl?: string): string {
+  if (!src) return "";
+  // 已是绝对 URL 或 data URL：仅做 github blob 规范化
+  if (/^(https?:|data:)/i.test(src)) return normalizeGithubUrl(src);
+  // 无 baseUrl：保持原样（渲染会失败，onError 兜底）
+  if (!baseUrl) return src;
+  try {
+    return new URL(src, baseUrl).href;
+  } catch {
+    return src;
+  }
+}
+
+/**
+ * 组件映射。variant:
+ * - "github": 详情页外部 markdown（README/model card）——套 .markdown-body，代码块交给
+ *   github-markdown-css 原生 pre/code 样式（不再自行包装 CodeBlock），图片 onError 占位。
+ * - "docs": 文档页内部生成的 markdown——不套 .markdown-body（避免污染 docs 原有结构），
+ *   保留原有 CodeBlock 多行代码框与表格边框样式。
+ */
+function makeComponents(variant: "github" | "docs", baseUrl?: string): Components {
+  const link: Components = {
     a({ href, children, ...props }) {
       return (
         <a
@@ -197,9 +218,69 @@ function makeComponents(): Components {
         </a>
       );
     },
+  };
+
+  if (variant === "docs") {
+    // docs：保持原有结构（多行代码统一 CodeBlock block 面板 + 表格边框）
+    return {
+      ...link,
+      code({ className, children, ...props }) {
+        const match = /language-(\w+)/.exec(className || "");
+        const code = String(children).replace(/\n$/, "");
+        // 含换行即用 CodeBlock 面板（无语言标注也显示 FileCode + 复制）
+        if (code.includes("\n")) {
+          return (
+            <div className="my-3">
+              <CodeBlock code={code} lang={match?.[1]} title={match?.[1]} />
+            </div>
+          );
+        }
+        return (
+          <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono" {...props}>
+            {children}
+          </code>
+        );
+      },
+      table({ children }) {
+        return (
+          <div className="overflow-x-auto my-3">
+            <table className="w-full border-collapse text-xs">{children}</table>
+          </div>
+        );
+      },
+      th({ children }) {
+        return <th className="border bg-muted px-3 py-1.5 text-left font-semibold">{children}</th>;
+      },
+      td({ children }) {
+        return <td className="border px-3 py-1.5">{children}</td>;
+      },
+    };
+  }
+
+  // github：外部 markdown，代码块交给 markdown-body 原生 pre/code 样式（不覆写 code）
+  return {
+    ...link,
     img({ src, alt, ...props }) {
-      // data URL（后端内嵌）或保留的绝对 URL 直接渲染；markdown-body 统一 max-width 规范
-      return <img src={src} alt={alt} loading="lazy" className="max-w-full h-auto rounded-md" {...props} />;
+      const resolved = resolveImageSrc(src ?? "", baseUrl);
+      return (
+        <img
+          src={resolved}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className="max-w-full h-auto rounded-md"
+          onError={(e) => {
+            // 加载失败：替换为占位，避免破版
+            const el = e.currentTarget;
+            el.style.display = "none";
+            el.insertAdjacentHTML(
+              "afterend",
+              `<span class="inline-block rounded border border-dashed border-muted px-2 py-1 text-xs text-muted-foreground my-1">图片 · ${alt || "加载失败"}</span>`,
+            );
+          }}
+          {...props}
+        />
+      );
     },
     table({ children }) {
       // 横向滚动容器，防止宽表格溢出；表格样式由 markdown-body 统一
@@ -214,14 +295,20 @@ function makeComponents(): Components {
 
 export default function Markdown({
   content,
+  baseUrl,
+  variant = "github",
   className = "",
 }: {
   content: string;
+  baseUrl?: string;
+  /** "github" = 详情页外部 markdown（markdown-body 样式）；"docs" = 文档页内部 markdown（原有结构） */
+  variant?: "github" | "docs";
   className?: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
   if (!content) return null;
 
-  const components = useMemo(() => makeComponents(), []);
+  const components = useMemo(() => makeComponents(variant, baseUrl), [variant, baseUrl]);
 
   // 跳过 YAML frontmatter (HF model cards 常见)
   let cleanContent = content;
@@ -232,16 +319,34 @@ export default function Markdown({
     }
   }
 
+  // 仅 github 变体：超长 README 默认限高折叠，可展开全部
+  const isGithub = variant === "github";
+  const isLong = isGithub && cleanContent.length > 6000;
+  const collapsible = isLong && !expanded;
+
   return (
-    <div className={`markdown-body text-sm ${className}`}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkFrontmatter, remarkMath]}
-        remarkRehypeOptions={{ allowDangerousHtml: true }}
-        rehypePlugins={[rehypeRaw, rehypeKatex, [rehypeSanitize, README_SCHEMA]]}
-        components={components}
-      >
-        {cleanContent}
-      </ReactMarkdown>
+    <div className={isGithub ? `markdown-body text-sm ${className}` : `text-sm ${className}`}>
+      <div className={collapsible ? "relative max-h-[65vh] overflow-hidden" : undefined}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkFrontmatter, remarkMath]}
+          remarkRehypeOptions={{ allowDangerousHtml: true }}
+          rehypePlugins={[rehypeRaw, rehypeKatex, [rehypeSanitize, README_SCHEMA]]}
+          components={components}
+        >
+          {cleanContent}
+        </ReactMarkdown>
+        {collapsible && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-background to-transparent" />
+        )}
+      </div>
+      {isLong && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 text-xs text-primary hover:underline cursor-pointer"
+        >
+          {expanded ? "收起" : "展开全部"}
+        </button>
+      )}
     </div>
   );
 }

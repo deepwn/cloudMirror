@@ -12,7 +12,7 @@ import type { DetailData } from "@shared/types";
 import { interpolateTemplate } from "../shared/utils/template";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import CopyField from "@/components/CopyField";
+import CodeBlock from "@/components/CodeBlock";
 import ProviderIcon from "@/components/ProviderIcon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StaticTabRenderer from "@/components/StaticTabRenderer";
@@ -144,7 +144,7 @@ function DetailContent({ type, target }: { type: string; target: string }) {
       {detail.quickConnects && detail.quickConnects.length > 0 && (
         <div className="flex flex-col gap-2">
           {detail.quickConnects.map((qc, i) => (
-            <CopyField key={i} value={sub(qc.template)} ariaLabel={`复制${qc.label}命令`} />
+            <CodeBlock key={i} code={sub(qc.template)} variant="inline" ariaLabel={`复制${qc.label}命令`} />
           ))}
         </div>
       )}

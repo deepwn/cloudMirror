@@ -14,7 +14,8 @@ interface Props {
 export default function StaticTabRenderer({ tab }: Props) {
   switch (tab.type) {
     case "markdown":
-      return <Markdown content={String(tab.data ?? "")} />;
+      // github 变体：外部 markdown 用 github-markdown-css（markdown-body）排版
+      return <Markdown content={String(tab.data ?? "")} baseUrl={tab.baseUrl} variant="github" />;
 
     case "table": {
       const { columns } = tab;

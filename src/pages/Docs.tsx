@@ -9,7 +9,7 @@ import { useAllProviders } from "../hooks/use-provider";
 import { useUserProviderHash } from "../hooks/use-user-providers";
 import { request as api } from "../lib/api";
 import ProviderIcon from "../components/ProviderIcon";
-import CopyField from "../components/CopyField";
+import CodeBlock from "../components/CodeBlock";
 import Markdown from "../components/Markdown";
 import { renderDocs } from "../providers/docs-manager";
 import { Empty, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
@@ -100,14 +100,14 @@ export default function Docs() {
           {/* Quick Start */}
           <section className="mb-10">
             <h2 className="text-lg font-semibold mb-3">快速开始</h2>
-            <CopyField value={rendered.quickStart.command} ariaLabel={`复制${selected.displayName}快速命令`} />
+            <CodeBlock code={rendered.quickStart.command} variant="inline" ariaLabel={`复制${selected.displayName}快速命令`} />
           </section>
 
           {/* 自动派生章节（代理端点 / 搜索 API / 凭据 / 快速连接） */}
           {rendered.autoSections.map((sec) => (
             <section key={sec.title} className="mb-8">
               <h2 className="text-lg font-semibold mb-3">{sec.title}</h2>
-              <Markdown content={sec.markdown} />
+              <Markdown content={sec.markdown} variant="docs" />
             </section>
           ))}
 
@@ -115,7 +115,7 @@ export default function Docs() {
           {rendered.proseSections.map((sec) => (
             <section key={sec.title} className="mb-8">
               <h2 className="text-lg font-semibold mb-3">{sec.title}</h2>
-              <Markdown content={sec.markdown} />
+              <Markdown content={sec.markdown} variant="docs" />
             </section>
           ))}
         </div>

@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { Download, Upload, Archive, Terminal } from "lucide-react";
 import { admin } from "../../lib/api";
 import { Button } from "@/components/ui/button";
-import CopyField from "../CopyField";
+import CodeBlock from "../CodeBlock";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -90,8 +90,9 @@ export default function BackupPanel() {
             <p className="flex items-center gap-1.5 font-medium">
               <Terminal size={12} /> Wrangler CLI 全量数据库备份
             </p>
-            <CopyField
-              value="wrangler d1 export cloudmirror-db --remote --output cloudmirror-backup.sql"
+            <CodeBlock
+              code="wrangler d1 export cloudmirror-db --remote --output cloudmirror-backup.sql"
+              variant="inline"
               ariaLabel="复制数据库导出命令"
               inputClassName="text-xs"
             />
@@ -154,8 +155,9 @@ export default function BackupPanel() {
             <p className="flex items-center gap-1.5 font-medium">
               <Terminal size={12} /> Wrangler CLI 全量数据库还原
             </p>
-            <CopyField
-              value="wrangler d1 execute cloudmirror-db --file=cloudmirror-backup.sql --remote"
+            <CodeBlock
+              code="wrangler d1 execute cloudmirror-db --file=cloudmirror-backup.sql --remote"
+              variant="inline"
               ariaLabel="复制数据库还原命令"
               inputClassName="text-xs"
             />

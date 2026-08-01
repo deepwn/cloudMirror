@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import CopyField from "../CopyField";
+import CodeBlock from "../CodeBlock";
 import { useUserProviderHash } from "../../hooks/use-user-providers";
 import type { UserProvider } from "@shared/types";
 
@@ -291,7 +291,7 @@ function DomainSection({ hash, onRotate }: { hash?: string; onRotate: () => void
     <div className="space-y-1">
       <Label className="text-xs">专属子域</Label>
       <div className="flex items-center gap-2">
-        <CopyField value={subdomain} className="flex-1" ariaLabel="复制子域" />
+        <CodeBlock code={subdomain} variant="inline" className="flex-1" ariaLabel="复制子域" />
         <Button variant="ghost" size="icon" onClick={onRotate} title="轮换子域">
           <RefreshCw size={14} />
         </Button>

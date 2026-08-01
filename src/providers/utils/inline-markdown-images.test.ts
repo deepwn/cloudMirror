@@ -55,16 +55,60 @@ describe("inlineMarkdownImages", () => {
     expect(out).toBe('![alt](data:image/png;base64,AAAAAA== "title text")');
   });
 
-  it("跨域图片保持原样（不 fetch）", async () => {
-    const fetchMock = vi.fn(async () => pngResponse(4));
-    vi.stubGlobal("fetch", fetchMock);
+  it("跨域 https 图片内嵌为 data URL（README 引用外部图床）", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => pngResponse(4)));
 
     const out = await inlineMarkdownImages(
       "![badge](https://img.shields.io/badge/x-y)",
       "https://raw.githubusercontent.com/owner/repo/HEAD/",
     );
 
-    expect(out).toBe("![badge](https://img.shields.io/badge/x-y)");
+    expect(out).toBe("![badge](data:image/png;base64,AAAAAA==)");
+  });
+
+  it("svg 图片内嵌为 data:image/svg+xml（<img> 内安全图像上下文）", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response("<svg xmlns='http://www.w3.org/2000/svg'/>", {
+        status: 200,
+        headers: { "Content-Type": "image/svg+xml" },
+      })));
+
+    const out = await inlineMarkdownImages(
+      "![logo](https://github.com/o/r/blob/main/logo.svg?raw=true)",
+      "https://huggingface.co/user/model/raw/main/",
+    );
+
+    expect(out).toBe("![logo](data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnLz4=)");
+  });
+
+  it("github blob URL 规范化为 raw.githubusercontent.com 再 fetch", async () => {
+    const fetchMock = vi.fn(async (_input: string | URL | Request) => pngResponse(4));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const out = await inlineMarkdownImages(
+      '<img src="https://github.com/deepseek-ai/DeepSeek-V2/blob/main/figures/logo.svg?raw=true">',
+      "https://huggingface.co/user/model/raw/main/",
+    );
+
+    // fetch 目标是规范化后的 raw URL（无 query）
+    const fetchUrl = fetchMock.mock.calls[0]?.[0];
+    expect(String(fetchUrl)).toBe(
+      "https://raw.githubusercontent.com/deepseek-ai/DeepSeek-V2/main/figures/logo.svg");
+    expect(out).toContain("data:image/png;base64,AAAAAA==");
+  });
+
+  it("内网 / IP 字面量图片保持原样（SSRF 防护）", async () => {
+    const fetchMock = vi.fn(async () => pngResponse(4));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const out = await inlineMarkdownImages(
+      "![x](https://10.0.0.1/a.png)\n![y](https://169.254.169.254/latest/meta-data)\n![z](https://localhost/img.png)",
+      "https://raw.githubusercontent.com/owner/repo/HEAD/",
+    );
+
+    expect(out).toContain("10.0.0.1");
+    expect(out).toContain("169.254.169.254");
+    expect(out).toContain("localhost");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -79,28 +123,16 @@ describe("inlineMarkdownImages", () => {
     expect(out).toContain("http://raw.githubusercontent.com");
   });
 
-  it("非 raster content-type 保持原样", async () => {
+  it("非图片 content-type 保持原样（text/html 等）", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response("text", { status: 200, headers: { "Content-Type": "text/plain" } })));
+      new Response("<html>not image</html>", { status: 200, headers: { "Content-Type": "text/html" } })));
 
     const out = await inlineMarkdownImages(
-      "![x](a.txt)",
+      "![x](a.html)",
       "https://raw.githubusercontent.com/owner/repo/HEAD/",
     );
 
-    expect(out).toBe("![x](a.txt)");
-  });
-
-  it("svg 保持原样（拒绝 XSS 面）", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response("<svg/>", { status: 200, headers: { "Content-Type": "image/svg+xml" } })));
-
-    const out = await inlineMarkdownImages(
-      "![x](a.svg)",
-      "https://raw.githubusercontent.com/owner/repo/HEAD/",
-    );
-
-    expect(out).toBe("![x](a.svg)");
+    expect(out).toBe("![x](a.html)");
   });
 
   it("超限图片保持原样", async () => {
