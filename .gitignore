@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+bundled/
+
+# Wrangler / Cloudflare
+.wrangler/
+wrangler.toml
+.dev.vars
+
+# Test coverage
+coverage/
+
+# IDE / OS
+.vscode/*
+!.vscode/tasks.json
+*.log
+.DS_Store
+Thumbs.db
+.idea/

@@ -1,0 +1,61 @@
+/* ============================================================================
+ * scroll.css — 全局滚动条样式
+ *
+ * 三层：
+ *   1. 全局默认（所有 overflow-y-auto 容器）
+ *   2. sidebar-scroll — 侧边栏（细条浅色，hover 浮现）
+ *   3. content-scroll — 内容区（标准样式）
+ * ============================================================================ */
+
+/* ---------- 全局 ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* WebKit 全局 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--border) 80%, var(--foreground));
+}
+
+/* ---------- 侧边栏 ---------- */
+.sidebar-scroll {
+  scrollbar-width: none; /* Firefox 隐藏 */
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  transition: background 0.2s;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--border) 60%, transparent);
+}
+
+/* ---------- 内容区 ---------- */
+.content-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.content-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.content-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+.content-scroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--border) 70%, var(--foreground));
+}

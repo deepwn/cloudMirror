@@ -1,0 +1,77 @@
+name = "cloudmirror"
+main = "src/worker/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# =============================================================================
+# workers.dev 子域名
+# 有 custom_domain 路由时自动禁用，显式设为 false 避免冲突。
+# =============================================================================
+workers_dev = false
+
+# =============================================================================
+# Static Assets — 前端 SPA (Cloudflare Vite Plugin 管理)
+# =============================================================================
+[assets]
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+
+# =============================================================================
+# 域名
+# =============================================================================
+# Custom Domain 与 Route 的区别:
+#   - custom_domain=true: Worker 作为源站，自动创建 DNS 记录和证书
+#   - Route: Worker 在已有 DNS 记录前代理（需 DNS 已指向 Cloudflare）
+# =============================================================================
+[[routes]]
+pattern = "mirror.example.com" # 👈 替换为你的根域名解析（裸域用 custom_domain 自动管理 DNS+证书）
+custom_domain = true
+
+# custom_domain 的通配证书需要 SSL for SaaS（付费），普通 Route 免费支持通配证书
+# 前提：DNS 中已添加 *.mirror.example.com 的 A/CNAME 记录并开启橙色云朵代理。
+# 需添加 DNS 解析，将CNAME通配解析至上述主域名 `*.mirror.example.com => (CNAME) mirror.example.com`
+[[routes]]
+pattern = "*.mirror.example.com/*" # 👈 替换为你的域名通配解析
+zone_name = "example.com" # 👈 替换为你的 Cloudflare zone 名称
+
+# =============================================================================
+# 平台变量
+# =============================================================================
+[vars]
+# 平台域名（子域代理后缀）。Worker 用于解析 {hash}.{APP_DOMAIN} 代理请求，
+# 前端 /site-info 也返回它用于拼接子域展示。缺省为 mirror.example.com。
+APP_DOMAIN = "mirror.example.com" # 👈 替换为你的镜像主域名
+
+# =============================================================================
+# 部署模式
+# =============================================================================
+[placement]
+mode = "smart"
+
+# =============================================================================
+# D1 Database
+#
+# 创建生产数据库 (只需一次):
+#   npx wrangler d1 create cloudmirror-db
+#   记录输出的 database_id, 填入下方
+#
+# 初始化表结构:
+#   yarn db:init:local   (初始化本地 D1，wrangler dev 前执行)
+#   yarn db:init:remote  (远端执行 schema.sql)
+#   yarn db:reset:local  (动态删除所有本地表并重建)
+#   yarn db:reset:remote (动态删除所有远端表并重建)
+# =============================================================================
+[[d1_databases]]
+binding = "DB"
+database_name = "cloudmirror-db"
+database_id = "your-database-id" # 👈 替换为你的 database_id
+
+# =============================================================================
+# Cron Triggers — 上限 3 个 (Cloudflare Workers 硬限制)
+#
+#  */10 * * * *  = health-check      (每10分钟, 上游可用性探测)
+#  0 * * * *     = aggregate-usage   (每小时, 用量聚合)
+#  0 3 * * *     = daily-maintenance (每天03:00, 统一执行: 过期清理 + 日志清理 + 审计清理 + 配额检查)
+# =============================================================================
+[triggers]
+crons = ["*/10 * * * *", "0 * * * *", "0 3 * * *"]
