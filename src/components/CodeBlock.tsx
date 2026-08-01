@@ -97,7 +97,8 @@ export default function CodeBlock({
       <InputGroupTextarea readOnly value={code} className="font-mono text-sm" rows={rows} />
       <InputGroupAddon align="block-start" className="justify-between">
         <span className="flex items-center gap-2">
-          <FileCode className="text-muted-foreground" />
+          {/* size-3.5 = 14px，与复制按钮内图标（size-3 = 12px 图标在 24px 按钮内）视觉协调 */}
+          <FileCode className="text-muted-foreground size-3.5" />
           {label && <InputGroupText className="font-mono">{label}</InputGroupText>}
         </span>
         <InputGroupButton
