@@ -2,7 +2,7 @@
 // src/worker/router.ts — 子域名解析 {hash}.{APP_DOMAIN}
 // ============================================================================
 
-import { getUserProviderByHash, getProviderSetting } from "./db";
+import { getUserProviderByHash, getProviderSetting, getCredentials } from "./db";
 import { getProvider } from "../providers/registry";
 import { decryptSecret } from "./crypto";
 import { DEFAULT_APP_DOMAIN } from "./config";
@@ -46,12 +46,22 @@ export async function resolveRoute(
   const provider = getProvider(up.provider);
   if (!provider) return null;
 
-  // 解密 PAT: 用户自设优先 → 管理员全局 fallback
+  // 解密 PAT: 用户自设(全局令牌)优先 → 访问凭据表(随机轮询) → 管理员全局 fallback
   let pat: string | null = null;
+  let patUsername: string | null = up.pat_username;
   if (up.pat && env.ENCRYPTION_KEY) {
     pat = await decryptSecret(up.pat, env.ENCRYPTION_KEY);
-  } else if (ps?.fallback_pat && env.ENCRYPTION_KEY) {
-    pat = await decryptSecret(ps.fallback_pat, env.ENCRYPTION_KEY);
+  } else {
+    // credentials 表（前端"访问凭据"，getCredentials 已过滤 is_active=1）
+    // 多凭据时随机轮询实现负载均衡（与 authenticateCli 同策略）
+    const creds = await getCredentials(env.DB, up.user_id, up.provider);
+    if (creds.length > 0) {
+      const selected = creds[Math.floor(Math.random() * creds.length)];
+      pat = await decryptSecret(selected.secret, env.ENCRYPTION_KEY);
+      patUsername = selected.username;
+    } else if (ps?.fallback_pat && env.ENCRYPTION_KEY) {
+      pat = await decryptSecret(ps.fallback_pat, env.ENCRYPTION_KEY);
+    }
   }
 
   return {
@@ -59,7 +69,7 @@ export async function resolveRoute(
       userId: up.user_id,
       providerType: up.provider,
       pat,
-      patUsername: up.pat_username,
+      patUsername,
     },
     provider,
   };

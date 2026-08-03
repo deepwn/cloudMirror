@@ -40,16 +40,44 @@ export class DockerHubProvider extends ProviderDefinition {
     hooks: {
       onBuildRequest: async (ctx) => {
         const url = new URL(ctx.request.url);
-        const repoMatch = url.pathname.match(/^\/v2\/(.+?)(?:\/(?:manifests|blobs|tags)\/|$)/);
-        const repo = repoMatch ? repoMatch[1] : null;
+        const path = url.pathname;
 
-        // Docker Token 交换（basic 凭据 → registry Bearer）
+        // 1) 客户端 Token 请求（401 挑战的 realm 已被 onSend 重写指向本 mirror）：
+        //    透传到 auth.docker.io，并按需注入 Basic PAT，保证 token 流量也走 worker。
+        if (path === "/token" || path.startsWith("/token/")) {
+          ctx.target = "https://auth.docker.io/token" + url.search;
+          ctx.headers.set("Host", "auth.docker.io");
+          ctx.headers.delete("Authorization");
+          if (ctx.route.pat) {
+            const user = ctx.route.patUsername || "token";
+            ctx.headers.set("Authorization", `Basic ${btoa(user + ":" + ctx.route.pat)}`);
+          }
+          return;
+        }
+
+        // 2) Docker Hub 单段镜像名自动补全 library/（/v2/nginx/... → /v2/library/nginx/...）
+        const singleSeg = path.match(/^\/v2\/([^/]+)(?=\/(?:manifests|blobs|tags)\/|$)/);
+        if (singleSeg && !singleSeg[1].startsWith("library/")) {
+          ctx.target = ctx.target.replace(
+            /\/v2\/[^/]+(?=\/(?:manifests|blobs|tags)\/|$)/,
+            `/v2/library/${singleSeg[1]}`,
+          );
+        }
+
+        // 3) Docker Token 交换（basic 凭据 → registry Bearer）
+        const repoMatch = new URL(ctx.target).pathname.match(
+          /^\/v2\/(.+?)(?:\/(?:manifests|blobs|tags)\/|$)/,
+        );
+        const repo = repoMatch ? repoMatch[1] : null;
+        const clientAuth = ctx.request.headers.get("Authorization");
+
         let authHeader: string | null = null;
         if (ctx.route.pat && repo) {
           try {
             const tokenUrl = new URL("https://auth.docker.io/token");
             tokenUrl.searchParams.set("service", "registry.docker.io");
             tokenUrl.searchParams.set("scope", `repository:${repo}:pull`);
+            tokenUrl.searchParams.set("offline_token", "true");
 
             const user = ctx.route.patUsername || "token";
             const id = btoa(user + ":" + ctx.route.pat);
@@ -60,6 +88,8 @@ export class DockerHubProvider extends ProviderDefinition {
               const td = (await tokenRes.json()) as { token?: string; access_token?: string };
               const t = td.token || td.access_token;
               if (t) authHeader = `Bearer ${t}`;
+            } else {
+              console.error(`[docker] token exchange HTTP ${tokenRes.status}`);
             }
           } catch (err) {
             console.error("[docker] token exchange failed:", (err as Error).message);
@@ -68,20 +98,29 @@ export class DockerHubProvider extends ProviderDefinition {
 
         ctx.headers.set("Host", this.upstream.replace("https://", ""));
         ctx.headers.set("User-Agent", ctx.request.headers.get("User-Agent") || "docker/27.0.0");
-        // 覆盖默认 Bearer PAT 注入：docker 需要 basic 交换后的 token
+        // 覆盖默认 Bearer PAT 注入：docker 需要 basic 交换后的 token。
+        // 交换成功 → 用服务端 token；交换失败 → 保留客户端自带 Authorization 作 fallback。
         ctx.headers.delete("Authorization");
         if (authHeader) ctx.headers.set("Authorization", authHeader);
+        else if (clientAuth) ctx.headers.set("Authorization", clientAuth);
       },
       onSend: (ctx) => {
         const out = ctx.response!.headers;
+        const mirrorHost = new URL(ctx.request.url).host;
         const loc = out.get("Location");
         if (loc) {
           out.set(
             "Location",
-            loc.replace(
-              /https:\/\/registry-1\.docker\.io/g,
-              `https://${new URL(ctx.request.url).host}`,
-            ),
+            loc.replace(/https:\/\/registry-1\.docker\.io/g, `https://${mirrorHost}`),
+          );
+        }
+        // 401 挑战的 realm 重写为本 mirror：客户端 token 请求必须回到 worker，
+        // 否则直连 auth.docker.io（PAT 失效，私有镜像 401）。
+        const wa = out.get("WWW-Authenticate");
+        if (wa) {
+          out.set(
+            "WWW-Authenticate",
+            wa.replace(/https:\/\/auth\.docker\.io/g, `https://${mirrorHost}`),
           );
         }
         out.delete("content-security-policy-report-only");

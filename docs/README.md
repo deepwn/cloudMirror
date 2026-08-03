@@ -4,6 +4,7 @@
 | ------------------------------------ | ------------------------------------------------------------------ |
 | [architecture.md](./architecture.md) | **架构设计**（权威）— 执行流程路径、核心组件、开发基准、关键不变量 |
 | [development.md](./development.md)   | **开发规范** — 环境、代码规范、测试要求、贡献流程                  |
+| [providers-memo.md](./providers-memo.md) | **Provider 运维备忘录** — 逐 Provider 代理/搜索/鉴权分析、PAT 验证流程矩阵、Docker 401 根因、参考项目 |
 | [README.md](../README.md)            | 项目介绍与部署指南                                                 |
 
 ## 维护约定

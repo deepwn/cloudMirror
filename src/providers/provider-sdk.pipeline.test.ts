@@ -162,6 +162,127 @@ describe("proxy pipeline (SDK v2)", () => {
     expect(headers.get("Authorization")).toBeNull();
   });
 
+  it("docker: /v2/ 单段镜像名补全 library/ 并用 PAT 交换 Bearer token", async () => {
+    const docker = getProvider("docker")!;
+    const fetchMock = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
+      if (String(input).startsWith("https://auth.docker.io/token")) {
+        return jsonResponse({ token: "exchanged-token" });
+      }
+      return new Response("ok", { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/v2/nginx/manifests/latest", {
+      headers: { "User-Agent": "docker/27.0.0" },
+    });
+    await docker.handleProxy(req, {
+      userId: "u",
+      providerType: "docker",
+      pat: "dckr_pat_xxx",
+      patUsername: "evil7",
+    });
+
+    // 第 1 次 fetch = token 交换：Basic (username:PAT) + offline_token
+    const tokenUrl = String(fetchMock.mock.calls[0][0]);
+    expect(tokenUrl).toContain("https://auth.docker.io/token?");
+    expect(tokenUrl).toContain("service=registry.docker.io");
+    expect(decodeURIComponent(tokenUrl)).toContain("scope=repository:library/nginx:pull");
+    expect(tokenUrl).toContain("offline_token=true");
+    const tokenHeaders = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<
+      string,
+      string
+    >;
+    expect(tokenHeaders.Authorization).toBe(`Basic ${btoa("evil7:dckr_pat_xxx")}`);
+
+    // 第 2 次 fetch = registry：target 已补全 library/ 且注入交换后的 Bearer
+    const registryUrl = String(fetchMock.mock.calls[1][0]);
+    expect(registryUrl).toBe("https://registry-1.docker.io/v2/library/nginx/manifests/latest");
+    const regHeaders = (fetchMock.mock.calls[1][1] as RequestInit).headers as Headers;
+    expect(regHeaders.get("Authorization")).toBe("Bearer exchanged-token");
+    expect(regHeaders.get("Host")).toBe("registry-1.docker.io");
+  });
+
+  it("docker: 401 响应重写 WWW-Authenticate realm 指向 mirror", async () => {
+    const docker = getProvider("docker")!;
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ errors: [] }), {
+          status: 401,
+          headers: {
+            "WWW-Authenticate":
+              'Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:library/nginx:pull"',
+          },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/v2/", {
+      headers: { "User-Agent": "docker/27.0.0" },
+    });
+    const res = await docker.handleProxy(req, {
+      userId: "u",
+      providerType: "docker",
+      pat: null,
+      patUsername: null,
+    });
+
+    expect(res.status).toBe(401);
+    const wa = res.headers.get("WWW-Authenticate") ?? "";
+    expect(wa).toContain('realm="https://abc123.mirror.example.com/token"');
+    expect(wa).not.toContain("auth.docker.io");
+  });
+
+  it("docker: /token 请求透传到 auth.docker.io 并注入 Basic PAT", async () => {
+    const docker = getProvider("docker")!;
+    const fetchMock = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit) =>
+        jsonResponse({ token: "client-token" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request(
+      "https://abc123.mirror.example.com/token?service=registry.docker.io&scope=repository:library/nginx:pull",
+      { headers: { "User-Agent": "docker/27.0.0" } },
+    );
+    await docker.handleProxy(req, {
+      userId: "u",
+      providerType: "docker",
+      pat: "dckr_pat_xxx",
+      patUsername: "evil7",
+    });
+
+    const target = String(fetchMock.mock.calls[0][0]);
+    expect(target).toBe(
+      "https://auth.docker.io/token?service=registry.docker.io&scope=repository:library/nginx:pull",
+    );
+    const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Headers;
+    expect(headers.get("Host")).toBe("auth.docker.io");
+    expect(headers.get("Authorization")).toBe(`Basic ${btoa("evil7:dckr_pat_xxx")}`);
+  });
+
+  it("docker: token 交换失败时保留客户端 Authorization 作 fallback", async () => {
+    const docker = getProvider("docker")!;
+    const fetchMock = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
+      if (String(input).startsWith("https://auth.docker.io/token")) {
+        return new Response("unauthorized", { status: 401 });
+      }
+      return new Response("ok", { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/v2/library/nginx/manifests/latest", {
+      headers: { "User-Agent": "docker/27.0.0", Authorization: "Bearer client-token" },
+    });
+    await docker.handleProxy(req, {
+      userId: "u",
+      providerType: "docker",
+      pat: "bad_pat",
+      patUsername: "evil7",
+    });
+    const regHeaders = (fetchMock.mock.calls[1][1] as RequestInit).headers as Headers;
+    expect(regHeaders.get("Authorization")).toBe("Bearer client-token");
+  });
+
   it("hook 抛错应降级 502（异常降级不击穿管线）", async () => {
     const boom = new BoomProvider();
     const req = new Request("https://abc123.mirror.example.com/anything");
