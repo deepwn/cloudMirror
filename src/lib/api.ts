@@ -157,6 +157,98 @@ export const apiDetail = {
     ),
 };
 
+// Debug 工具（管理员 Postman 式单次请求）
+export interface DebugFetchResult {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  body: string;
+  truncated: boolean;
+  durationMs: number;
+  finalUrl: string;
+}
+
+export const debug = {
+  fetch: (data: {
+    method: string;
+    url: string;
+    headers?: Record<string, string>;
+    body?: string;
+  }) =>
+    request<{ success: boolean; data: DebugFetchResult }>("/debug-fetch", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+};
+
+// ---- 流量录制 (Capture) ----
+
+export interface CaptureSession {
+  id: string;
+  name: string;
+  hash: string;
+  mode: "echo" | "challenge" | "custom" | "transparent";
+  target_upstream: string | null;
+  target_auth: string | null;
+  custom_status: number | null;
+  custom_body: string | null;
+  custom_headers: string | null;
+  enabled: number;
+  created_at: string;
+}
+
+export interface CaptureLog {
+  id: string;
+  seq: number;
+  method: string;
+  path: string;
+  headers: string | null;
+  body: string | null;
+  resp_status: number | null;
+  resp_headers: string | null;
+  resp_body: string | null;
+  client_ua: string | null;
+  created_at: string;
+}
+
+export const capture = {
+  list: () => request<{ success: boolean; data: CaptureSession[] }>("/capture"),
+  create: (data: {
+    name?: string;
+    mode: string;
+    target_upstream?: string;
+    target_auth?: string;
+    custom_status?: number;
+    custom_body?: string;
+    custom_headers?: Record<string, string>;
+  }) =>
+    request<{ success: boolean; data: CaptureSession }>("/capture", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  detail: (id: string) =>
+    request<{ success: boolean; data: { session: CaptureSession; logs: CaptureLog[]; total: number } }>(
+      `/capture/${id}`,
+    ),
+  update: (
+    id: string,
+    data: {
+      name?: string;
+      mode?: string;
+      target_upstream?: string;
+      target_auth?: string;
+      custom_status?: number;
+      custom_body?: string;
+      custom_headers?: Record<string, string>;
+      enabled?: boolean;
+    },
+  ) =>
+    request<{ success: boolean }>(`/capture/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  remove: (id: string) => request<{ success: boolean }>(`/capture/${id}`, { method: "DELETE" }),
+  exportUrl: (id: string) => `${PLATFORM_API_PREFIX}/capture/${id}/export`,
+};
+
 // Credentials
 export const credentials = {
   list: (provider?: string) =>

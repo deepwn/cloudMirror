@@ -2,7 +2,7 @@
 
 > 定位：**运维/排障参考** — 逐 Provider 记录代理管线、搜索接口、PAT 验证流程与已知缺陷。
 > 权威架构见 [architecture.md](./architecture.md)，代码规范见 [development.md](./development.md)。
-> 最后更新：2026-08-03（Docker 401 排查 + GitHub 参考实现比对后整理）
+> 最后更新：2026-08-03（Docker 401 排查 + GitHub 参考实现比对 + 调试工具上线）
 
 ---
 
@@ -198,12 +198,30 @@ mirror → 客户端: 401 + WWW-Authenticate（⚠️ realm 是否被重写是�
 3. **PAT 是否真的到达代理链路**：若用户在前端"**访问凭据**"（`credentials` 表）配置 PAT，`resolveRoute()` 根本读不到 → `ctx.route.pat = null` → 不交换 token → 私有镜像 401。这是最可能的直接原因（用户已确认配了 PAT）。
 
 **修复方向**（对齐 §2.3 参考实现）：
-- [ ] `resolveRoute()` 接入 `credentials` 表（启用 `authenticateCli` 或同等逻辑），让"访问凭据"进入 CLI 代理链路；
-- [ ] `docker.provider.ts` `onSend` 重写 `WWW-Authenticate` 的 `realm` → mirror host（cmliu 方式）或提供 `/v2/auth` 转发端点（ciiiii 方式）；
-- [ ] 处理 mirror 上的 `/token` 路径（透传到 auth.docker.io，必要时注入 Basic PAT）；
-- [ ] `onBuildRequest`：交换失败时**保留客户端 Authorization 作 fallback**（不要无条件 delete）；
-- [ ] `/v2/<name>/...` 单段镜像名 → `library/` 补全（路径 + scope）；
-- [ ] scope 追加 `offline_token=true`；PAT 交换响应建议按 repo 缓存（TTL 5min），减少 auth.docker.io 调用。
+- [x] `resolveRoute()` 接入 `credentials` 表（启用 `authenticateCli` 或同等逻辑），让"访问凭据"进入 CLI 代理链路；
+- [x] `docker.provider.ts` `onSend` 重写 `WWW-Authenticate` 的 `realm` → mirror host（cmliu 方式）或提供 `/v2/auth` 转发端点（ciiiii 方式）；
+- [x] 处理 mirror 上的 `/token` 路径（透传到 auth.docker.io，必要时注入 Basic PAT；scope 单段镜像名补 `library/`）；
+- [x] `onBuildRequest`：交换失败时**保留客户端 Authorization 作 fallback**（不要无条件 delete）；
+- [x] `/v2/<name>/...` 单段镜像名 → `library/` 补全（路径 + scope）；
+- [x] scope 追加 `offline_token=true`；PAT 交换结果按 repo + PAT 指纹缓存（Cache API，TTL 5min），避免一个镜像 N 个 blob 请求重复交换耗尽 PAT 配额。
+
+### 4.1 实测结论（2026-08-03，mirror.deepwn.io 生产环境）
+
+用 curl 全链路实测 + D1 查库确认：
+
+1. `/v2/` → 401 + `WWW-Authenticate: Bearer realm="https://{mirror}/token"`（realm 重写 ✓）
+2. `/token?service=...&scope=...` → 200 + JWT（透传 ✓）
+3. 带 token 请求 manifests → **429 Too Many Requests**（`ratelimit-remaining: 0`，`docker-ratelimit-source` 为 Cloudflare 出口 IP）
+
+**根因：Docker Hub 对 Cloudflare Worker IP 的匿名限额（100 pulls/hour）已打满**，而用户配置的 PAT **从未写入系统** —— D1 三层全部为空：
+
+| 表 | 查询结果 |
+|---|---|
+| `user_providers`（docker） | `pat IS NULL`、`pat_username IS NULL` |
+| `credentials` | 空表 |
+| `provider_settings`（docker） | 无记录（无 `fallback_pat`） |
+
+修复后 401 已解决；继续 429 的唯一原因是匿名限额耗尽。**必须配置 PAT**：在 UI「上游管理 → Docker → 全局令牌（用户名 + Access Token）」或「访问凭据」保存。PAT 生效后 `/token` 注入 Basic PAT → 客户端拿到 **PAT token**（限额 5000/hr 按用户），服务端交换亦用 PAT，不再按 CF IP 匿名限额。此外 `_base.ts` 默认 Bearer PAT 注入被 docker 覆盖为 Basic 交换，属预期。
 
 ---
 

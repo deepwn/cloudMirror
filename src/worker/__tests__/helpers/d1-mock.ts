@@ -72,6 +72,26 @@ export function createMockDB(): D1Database {
       return { c: rows.length };
     }
 
+    // SELECT MAX(col) — 返回 { m: number|null }
+    const maxMatch = trimmed.match(/SELECT\s+MAX\((\w+)\)\s+as\s+(\w+)/i);
+    if (maxMatch) {
+      let table = "";
+      const tblMatch = trimmed.match(/FROM\s+(\w+)/i);
+      if (tblMatch) table = tblMatch[1];
+      let rows = ensure(table);
+      if (trimmed.toUpperCase().includes("WHERE")) {
+        rows = applySimpleFilter(rows, trimmed, values);
+      }
+      const col = maxMatch[1];
+      const alias = maxMatch[2];
+      if (rows.length === 0) return { [alias]: null };
+      const maxVal = rows.reduce<number>((acc, r) => {
+        const v = r[col];
+        return typeof v === "number" && v > acc ? v : acc;
+      }, 0);
+      return { [alias]: maxVal };
+    }
+
     // SELECT *
     if (trimmed.toUpperCase().startsWith("SELECT")) {
       let table = "";

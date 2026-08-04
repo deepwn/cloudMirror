@@ -62,6 +62,42 @@ CREATE TABLE IF NOT EXISTS credentials (
 );
 CREATE INDEX IF NOT EXISTS idx_cred_user_provider ON credentials(user_id, provider);
 
+-- 4b. 流量录制会话 (Capture) — 将 CLI 请求录制下来用于构造/调试 Provider
+CREATE TABLE IF NOT EXISTS capture_sessions (
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name            TEXT NOT NULL DEFAULT '未命名录制',
+  hash            TEXT NOT NULL UNIQUE,            -- 16 位 hex，专属子域
+  mode            TEXT NOT NULL DEFAULT 'echo',    -- echo | challenge | custom | transparent
+  target_upstream TEXT DEFAULT NULL,               -- transparent 模式的真实上游（https://registry-1.docker.io）
+  target_auth     TEXT DEFAULT NULL,               -- transparent 模式 token 服务器（可选，OCI 类）
+  custom_status   INTEGER DEFAULT 200,
+  custom_body     TEXT DEFAULT NULL,
+  custom_headers  TEXT DEFAULT NULL,               -- JSON
+  enabled         INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_capture_user ON capture_sessions(user_id);
+
+-- 4c. 录制到的请求日志（含真实响应摘要，transparent 模式记录 status/响应头/响应体）
+CREATE TABLE IF NOT EXISTS capture_logs (
+  id              TEXT PRIMARY KEY,
+  session_id      TEXT NOT NULL REFERENCES capture_sessions(id) ON DELETE CASCADE,
+  seq             INTEGER NOT NULL DEFAULT 0,      -- 会话内递增序号
+  method          TEXT NOT NULL,
+  path            TEXT NOT NULL,                   -- 含 query
+  headers         TEXT DEFAULT NULL,               -- JSON: {k: v}
+  body            TEXT DEFAULT NULL,               -- 截断至 256KB
+  resp_status     INTEGER DEFAULT NULL,            -- transparent: 真实上游状态码
+  resp_headers    TEXT DEFAULT NULL,               -- transparent: 真实响应头 JSON
+  resp_body       TEXT DEFAULT NULL,               -- transparent: 真实响应体摘要
+  client_ip       TEXT DEFAULT NULL,
+  client_ua       TEXT DEFAULT NULL,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_capture_log_session ON capture_logs(session_id, seq);
+
 -- 5. 用户配额 / 限制表
 CREATE TABLE IF NOT EXISTS user_limits (
   id              TEXT PRIMARY KEY,

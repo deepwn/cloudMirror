@@ -11,7 +11,9 @@ import { handleDashboardRoute } from "./dashboard";
 import { handleAdminRoute } from "./admin";
 import { handleProviderRoute } from "./providers";
 import { handleFetchRoute } from "./fetch";
+import { handleDebugFetchRoute } from "./debug";
 import { handleDetailRoute } from "./detail";
+import { handleCaptureRoute } from "./capture";
 import { getAllMetas } from "../../providers/registry";
 import { PLATFORM_API_PREFIX, platformApi } from "../../shared/api";
 import { DEFAULT_APP_DOMAIN } from "../config";
@@ -56,6 +58,12 @@ export async function handleApi(
 
     case path.startsWith("/fetch"):
       return handleFetchRoute(request, env);
+
+    case path === "/debug-fetch":
+      return handleDebugFetchRoute(request, env);
+
+    case path.startsWith("/capture"):
+      return handleCaptureRoute(request, env, path);
 
     case path === "/site-info":
       return makeRes(

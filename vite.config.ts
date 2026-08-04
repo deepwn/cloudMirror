@@ -15,4 +15,8 @@ export default defineConfig({
       "@": resolve(rootDir, "src"),
     },
   },
+  server: {
+    // 本地允许 {hash}.{APP_DOMAIN} 通配子域（capture/子域代理调试）
+    allowedHosts: [".mirror.deepwn.io", ".mirror.example.com", "localhost", "127.0.0.1"],
+  },
 });

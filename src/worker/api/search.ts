@@ -7,7 +7,7 @@ import type { Env } from "../providers/types";
 import { getProvider } from "../../providers/registry";
 import { getAllProviders } from "../../providers/registry";
 import { verify } from "../jwt";
-import { getUserProviderByUserAndProvider } from "../db";
+import { getUserProviderByUserAndProvider, getCredentials } from "../db";
 import { decryptSecret } from "../crypto";
 
 /** 从请求的 Authorization 头解析用户 PAT，失败返回 undefined */
@@ -23,9 +23,16 @@ async function resolveUserPat(
   try {
     const payload = await verify(token, env.JWT_SECRET);
     if (!payload) return undefined;
+    // 优先级与 resolveRoute 一致：用户自设(全局令牌) → credentials(访问凭据) → fallback
     const up = await getUserProviderByUserAndProvider(env.DB, payload.sub, providerType);
-    if (!up?.pat) return undefined;
-    return decryptSecret(up.pat, env.ENCRYPTION_KEY);
+    if (!up) return undefined;
+    if (up.pat) return decryptSecret(up.pat, env.ENCRYPTION_KEY);
+    const creds = await getCredentials(env.DB, payload.sub, providerType);
+    if (creds.length > 0) {
+      const selected = creds[Math.floor(Math.random() * creds.length)];
+      return decryptSecret(selected.secret, env.ENCRYPTION_KEY);
+    }
+    return undefined;
   } catch {
     return undefined;
   }

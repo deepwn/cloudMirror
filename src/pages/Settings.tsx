@@ -15,6 +15,7 @@ import {
   Shield,
   Package,
   Container,
+  FlaskConical,
 } from "lucide-react";
 import { auth, admin, getStoredUser } from "../lib/api";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,19 @@ import SecurityPanel from "../components/settings/SecurityPanel";
 import AccessControlPanel from "../components/settings/AccessControlPanel";
 import AuditLogPanel from "../components/settings/AuditLogPanel";
 import BackupPanel from "../components/settings/BackupPanel";
+import DebugToolPanel from "../components/settings/DebugToolPanel";
+import CapturePanel from "../components/settings/CapturePanel";
 
 /* ---------- nav sections ---------- */
-type NavSection = "account" | "providers" | "users" | "settings" | "access" | "audit" | "backup";
+type NavSection =
+  | "account"
+  | "providers"
+  | "users"
+  | "settings"
+  | "access"
+  | "audit"
+  | "backup"
+  | "debug";
 
 interface NavItem {
   id: NavSection;
@@ -44,6 +55,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "users", label: "用户管理", icon: Users, adminOnly: true },
   { id: "access", label: "黑白名单", icon: Shield, adminOnly: true },
   { id: "audit", label: "审计日志", icon: FileText, adminOnly: true },
+  { id: "debug", label: "调试工具", icon: FlaskConical, adminOnly: true },
   { id: "backup", label: "配置备份", icon: Package, adminOnly: true },
 ];
 
@@ -80,6 +92,9 @@ export default function Settings() {
 
   /* ---- active section ---- */
   const [activeSection, setActiveSection] = useState<NavSection>("account");
+
+  /* ---- 调试工具子 Tab ---- */
+  const [debugTab, setDebugTab] = useState<"postman" | "capture">("postman");
 
   /* ---- audit user list ---- */
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
@@ -170,6 +185,7 @@ export default function Settings() {
     settings: "系统运行概况与安全策略",
     access: "管理 IP / UA / 用户的黑白名单规则",
     audit: "查看登录、操作、拉取等安全审计记录",
+    debug: "Postman 式单次请求，用于诊断代理链路与上游接口",
     backup: "导出与导入系统配置备份",
   };
 
@@ -261,6 +277,36 @@ export default function Settings() {
 
           {activeSection === "audit" && isAdmin && (
             <AuditLogPanel users={adminUsers.map((u) => ({ id: u.id, username: u.username }))} />
+          )}
+
+          {activeSection === "debug" && isAdmin && (
+            <div className="space-y-4">
+              <div className="flex gap-1 rounded-md border bg-input/20 p-1 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setDebugTab("postman")}
+                  className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                    debugTab === "postman"
+                      ? "bg-card shadow text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Postman 调试
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDebugTab("capture")}
+                  className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                    debugTab === "capture"
+                      ? "bg-card shadow text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  流量录制
+                </button>
+              </div>
+              {debugTab === "postman" ? <DebugToolPanel /> : <CapturePanel />}
+            </div>
           )}
 
           {activeSection === "backup" && isAdmin && <BackupPanel />}

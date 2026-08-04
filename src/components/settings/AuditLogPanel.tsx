@@ -23,6 +23,7 @@ import {
   FileText,
   Globe,
   Info,
+  Radio,
 } from "lucide-react";
 import { admin, type AuditLogEntry } from "../../lib/api";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,8 @@ const EVENT_LABELS: Record<string, string> = {
   invite_created: "创建邀请",
   proxy_pull: "代理请求",
   brute_blocked: "爆破封禁",
+  debug_fetch: "调试请求",
+  capture_request: "录制请求",
 };
 
 const EVENT_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
@@ -81,6 +84,8 @@ const EVENT_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
   invite_created: UserPlus,
   proxy_pull: Download,
   brute_blocked: Shield,
+  debug_fetch: Monitor,
+  capture_request: Radio,
 };
 
 /* ---------- 事件颜色映射 ---------- */
@@ -95,7 +100,10 @@ function eventVariant(event: string): "default" | "destructive" | "secondary" | 
     case "user_restored":
       return "default";
     case "proxy_pull":
+    case "capture_request":
       return "secondary";
+    case "debug_fetch":
+      return "outline";
     default:
       return "outline";
   }

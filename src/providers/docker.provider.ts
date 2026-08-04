@@ -14,6 +14,56 @@ import type {
   GenericSearchResponse,
 } from "../shared/types";
 
+// Docker Token 交换结果缓存（Cache API，按 repo + PAT 指纹，TTL 5min）。
+// 一个镜像拉取包含 manifests + N 个 blob 请求，若每个请求都向 auth.docker.io
+// 重新交换，会快速耗尽 PAT 配额（5000/hr）且显著增加延迟。
+const TOKEN_CACHE_TTL = 300;
+
+function dockerTokenCacheKey(repo: string, patFingerprint: string): string {
+  return `https://internal.cloudmirror/docker-token/${encodeURIComponent(repo)}/${patFingerprint}`;
+}
+
+function getTokenCache(): Cache | undefined {
+  try {
+    return (caches as unknown as { default?: Cache })?.default;
+  } catch {
+    return undefined;
+  }
+}
+
+async function getCachedToken(
+  repo: string,
+  patFingerprint: string,
+): Promise<string | null> {
+  const cache = getTokenCache();
+  if (!cache) return null;
+  try {
+    const hit = await cache.match(dockerTokenCacheKey(repo, patFingerprint));
+    if (!hit) return null;
+    const data = (await hit.json()) as { token?: string };
+    return data.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function setCachedToken(
+  repo: string,
+  patFingerprint: string,
+  token: string,
+): Promise<void> {
+  const cache = getTokenCache();
+  if (!cache) return;
+  try {
+    const res = new Response(JSON.stringify({ token }), {
+      headers: { "Cache-Control": `max-age=${TOKEN_CACHE_TTL}` },
+    });
+    await cache.put(dockerTokenCacheKey(repo, patFingerprint), res);
+  } catch {
+    // 缓存不可用时忽略（降级为每次交换）
+  }
+}
+
 export class DockerHubProvider extends ProviderDefinition {
   readonly id = "docker";
   readonly upstream = "https://registry-1.docker.io";
@@ -45,6 +95,16 @@ export class DockerHubProvider extends ProviderDefinition {
         // 1) 客户端 Token 请求（401 挑战的 realm 已被 onSend 重写指向本 mirror）：
         //    透传到 auth.docker.io，并按需注入 Basic PAT，保证 token 流量也走 worker。
         if (path === "/token" || path.startsWith("/token/")) {
+          // 补全 scope 中单段镜像名（repository:neo4j:pull → repository:library/neo4j:pull），
+          // 否则 auth.docker.io 会拒绝非规范仓库名的匿名/PAT 签发。
+          const scope = url.searchParams.get("scope");
+          if (scope) {
+            const parts = scope.split(":");
+            if (parts.length === 3 && parts[0] === "repository" && !parts[1].includes("/")) {
+              parts[1] = "library/" + parts[1];
+              url.searchParams.set("scope", parts.join(":"));
+            }
+          }
           ctx.target = "https://auth.docker.io/token" + url.search;
           ctx.headers.set("Host", "auth.docker.io");
           ctx.headers.delete("Authorization");
@@ -71,29 +131,58 @@ export class DockerHubProvider extends ProviderDefinition {
         const repo = repoMatch ? repoMatch[1] : null;
         const clientAuth = ctx.request.headers.get("Authorization");
 
+        // ---- 诊断埋点（暴露为 X-Cf-Debug-Auth，供真实 CLI/审计观测 auth 链路） ----
+        ctx.debug = {
+          pat: ctx.route.pat ? "yes" : "no",
+          client: clientAuth ? clientAuth.split(" ")[0] || "auth" : "none",
+        };
+
         let authHeader: string | null = null;
         if (ctx.route.pat && repo) {
+          const user = ctx.route.patUsername || "token";
+          const patFingerprint = ctx.route.pat.slice(-8);
           try {
-            const tokenUrl = new URL("https://auth.docker.io/token");
-            tokenUrl.searchParams.set("service", "registry.docker.io");
-            tokenUrl.searchParams.set("scope", `repository:${repo}:pull`);
-            tokenUrl.searchParams.set("offline_token", "true");
-
-            const user = ctx.route.patUsername || "token";
-            const id = btoa(user + ":" + ctx.route.pat);
-            const tokenRes = await fetch(tokenUrl.toString(), {
-              headers: { Authorization: `Basic ${id}`, Accept: "application/json" },
-            });
-            if (tokenRes.ok) {
-              const td = (await tokenRes.json()) as { token?: string; access_token?: string };
-              const t = td.token || td.access_token;
-              if (t) authHeader = `Bearer ${t}`;
+            // 缓存命中 → 复用已交换 token，避免每个 blob 请求重复交换
+            const cached = await getCachedToken(repo, patFingerprint);
+            ctx.debug!.cache = cached ? "hit" : "miss";
+            if (cached) {
+              authHeader = `Bearer ${cached}`;
+              ctx.debug!.auth = "cache";
             } else {
-              console.error(`[docker] token exchange HTTP ${tokenRes.status}`);
+              const tokenUrl = new URL("https://auth.docker.io/token");
+              tokenUrl.searchParams.set("service", "registry.docker.io");
+              tokenUrl.searchParams.set("scope", `repository:${repo}:pull`);
+              tokenUrl.searchParams.set("offline_token", "true");
+
+              const id = btoa(user + ":" + ctx.route.pat);
+              const tokenRes = await fetch(tokenUrl.toString(), {
+                headers: { Authorization: `Basic ${id}`, Accept: "application/json" },
+              });
+              if (tokenRes.ok) {
+                const td = (await tokenRes.json()) as {
+                  token?: string;
+                  access_token?: string;
+                };
+                const t = td.token || td.access_token;
+                if (t) {
+                  authHeader = `Bearer ${t}`;
+                  await setCachedToken(repo, patFingerprint, t);
+                  ctx.debug!.auth = "exchange";
+                } else {
+                  ctx.debug!.auth = "exchange-empty";
+                }
+              } else {
+                ctx.debug!.auth = `exchange-http-${tokenRes.status}`;
+                console.error(`[docker] token exchange HTTP ${tokenRes.status}`);
+              }
             }
           } catch (err) {
+            ctx.debug!.auth = "exchange-error";
             console.error("[docker] token exchange failed:", (err as Error).message);
           }
+        } else {
+          ctx.debug!.auth = ctx.route.pat ? "no-repo" : "no-pat";
+          ctx.debug!.cache = "n/a";
         }
 
         ctx.headers.set("Host", this.upstream.replace("https://", ""));
@@ -101,8 +190,22 @@ export class DockerHubProvider extends ProviderDefinition {
         // 覆盖默认 Bearer PAT 注入：docker 需要 basic 交换后的 token。
         // 交换成功 → 用服务端 token；交换失败 → 保留客户端自带 Authorization 作 fallback。
         ctx.headers.delete("Authorization");
-        if (authHeader) ctx.headers.set("Authorization", authHeader);
-        else if (clientAuth) ctx.headers.set("Authorization", clientAuth);
+        if (authHeader) {
+          ctx.headers.set("Authorization", authHeader);
+          ctx.debug!.final = "server";
+        } else if (clientAuth) {
+          ctx.headers.set("Authorization", clientAuth);
+          ctx.debug!.final = "client";
+        } else {
+          ctx.debug!.final = "none";
+        }
+        console.log(
+          `[docker] path=${path} repo=${repo ?? "-"} pat=${ctx.route.pat ? "yes" : "no"} ` +
+            `clientAuth=${clientAuth ? clientAuth.slice(0, 20) + "..." : "none"} ` +
+            `authHeader=${authHeader ? "yes" : "no"} ` +
+            `finalAuth=${ctx.headers.get("Authorization") ? ctx.headers.get("Authorization")!.slice(0, 20) + "..." : "none"} ` +
+            `debug=${JSON.stringify(ctx.debug)}`,
+        );
       },
       onSend: (ctx) => {
         const out = ctx.response!.headers;
@@ -121,6 +224,15 @@ export class DockerHubProvider extends ProviderDefinition {
           out.set(
             "WWW-Authenticate",
             wa.replace(/https:\/\/auth\.docker\.io/g, `https://${mirrorHost}`),
+          );
+        }
+        // 诊断：对 401/429 响应暴露 auth 链路（PAT/交换/最终来源），供真实 CLI 与调试观测。
+        if (ctx.debug && (ctx.response!.status === 401 || ctx.response!.status === 429)) {
+          out.set(
+            "X-Cf-Debug-Auth",
+            Object.entries(ctx.debug)
+              .map(([k, v]) => `${k}=${v}`)
+              .join(","),
           );
         }
         out.delete("content-security-policy-report-only");

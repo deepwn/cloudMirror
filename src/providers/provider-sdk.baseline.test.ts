@@ -19,6 +19,7 @@ const expectedDisplayNames: Record<string, string> = {
   cpan: "Perl",
   dart: "Dart",
   cran: "R",
+  capture: "Capture",
 };
 
 const searchQueryByProvider: Record<string, string> = {
@@ -106,9 +107,10 @@ describe("provider sdk baseline", () => {
     }
   });
 
-  it("搜索 provider 列表应只返回启用搜索的源", () => {
+  it("搜索 provider 列表应只返回启用搜索的源（capture 等工具源除外）", () => {
     const searchProviders = getSearchProviders();
-    expect(searchProviders.length).toBe(ALL_PROVIDERS.length);
+    const searchableCount = ALL_PROVIDERS.filter((p) => p.meta.searchEnabled).length;
+    expect(searchProviders.length).toBe(searchableCount);
     expect(searchProviders.every((provider) => provider.meta.searchEnabled)).toBe(true);
   });
 

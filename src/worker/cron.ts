@@ -22,6 +22,9 @@ const CRON_BATCH_LIMIT = 5000;
 const DEFAULT_RETENTION_DAYS = 90;
 const DEFAULT_AUDIT_MAX_ROWS = 100000;
 
+/** capture 录制日志默认保留天数 */
+const DEFAULT_CAPTURE_RETENTION_DAYS = 30;
+
 /**
  * scheduled handler 入口。
  * Cloudflare Workers 限制 3 个 cron 触发器，每日维护任务已合并到 0 3 * * *。
@@ -220,6 +223,56 @@ async function cleanupAudit(env: Env): Promise<void> {
   }
 }
 
+/**
+ * 清理 capture 录制数据：
+ *  1) 删除超过保留期的录制日志（滚动，防 D1 配额超限）；
+ *  2) 删除已停用超过保留期的录制会话（含日志，CASCADE）。
+ */
+async function cleanupCapture(env: Env): Promise<void> {
+  if (!env.DB) return;
+  try {
+    const retentionDays = await getSettingInt(
+      env.DB,
+      "capture_retention_days",
+      DEFAULT_CAPTURE_RETENTION_DAYS,
+    );
+    // 1) 删除过期日志
+    const { meta: logMeta } = await env.DB.prepare(`
+      DELETE FROM capture_logs
+      WHERE id IN (
+        SELECT id FROM capture_logs
+        WHERE created_at < datetime('now', ?)
+        ORDER BY created_at ASC
+        LIMIT ?
+      )
+    `)
+      .bind(`-${retentionDays} days`, CRON_BATCH_LIMIT)
+      .run();
+    const logDeleted = logMeta?.rows_written ?? (logMeta?.changed_db ? CRON_BATCH_LIMIT : 0);
+
+    // 2) 删除超期会话（级联删除其日志）
+    const { meta: sessionMeta } = await env.DB.prepare(`
+      DELETE FROM capture_sessions
+      WHERE id IN (
+        SELECT id FROM capture_sessions
+        WHERE created_at < datetime('now', ?)
+        ORDER BY created_at ASC
+        LIMIT ?
+      )
+    `)
+      .bind(`-${retentionDays} days`, CRON_BATCH_LIMIT)
+      .run();
+    const sessionDeleted =
+      sessionMeta?.rows_written ?? (sessionMeta?.changed_db ? CRON_BATCH_LIMIT : 0);
+
+    console.log(
+      `[cron] cleanup-capture: logs=${logDeleted} sessions=${sessionDeleted} (retention: ${retentionDays}d, batch: ${CRON_BATCH_LIMIT})`,
+    );
+  } catch (err) {
+    console.error("[cron] cleanup-capture error:", (err as Error).message);
+  }
+}
+
 /** 暂停过期用户 */
 async function expireLimits(env: Env): Promise<void> {
   if (!env.DB) return;
@@ -250,6 +303,7 @@ async function runDailyMaintenance(env: Env): Promise<void> {
     { name: "daily-cleanup", fn: dailyCleanup },
     { name: "cleanup-logs", fn: cleanupLogs },
     { name: "cleanup-audit", fn: cleanupAudit },
+    { name: "cleanup-capture", fn: cleanupCapture },
     { name: "expire-limits", fn: expireLimits },
   ];
 

@@ -93,6 +93,40 @@ export interface ProviderSetting {
   updated_at: string;
 }
 
+// ===== 流量录制 (Capture) =====
+
+export interface CaptureSession {
+  id: string;
+  user_id: string;
+  name: string;
+  hash: string;
+  mode: "echo" | "challenge" | "custom" | "transparent";
+  target_upstream: string | null;
+  target_auth: string | null;
+  custom_status: number | null;
+  custom_body: string | null;
+  custom_headers: string | null;
+  enabled: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CaptureLog {
+  id: string;
+  session_id: string;
+  seq: number;
+  method: string;
+  path: string;
+  headers: string | null;
+  body: string | null;
+  resp_status: number | null;
+  resp_headers: string | null;
+  resp_body: string | null;
+  client_ip: string | null;
+  client_ua: string | null;
+  created_at: string;
+}
+
 // ===== 用量 & 配额 =====
 
 export interface UserLimits {
@@ -468,6 +502,8 @@ export interface ProxyContext {
   upstream?: Response;
   /** onSend 决定的最终响应 */
   response?: Response;
+  /** Provider 诊断埋点（如 docker auth 链路），可被 onSend 暴露为 X-Cf-Debug-* 头 */
+  debug?: Record<string, string>;
 }
 
 /** 代理管线 hooks（Fastify lifecycle 窄化版） */

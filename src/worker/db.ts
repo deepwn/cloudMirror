@@ -9,6 +9,8 @@ import type {
   DailyUsage,
   UserProvider,
   ProviderSetting,
+  CaptureSession,
+  CaptureLog,
 } from "../shared/types";
 import { randomHex } from "./crypto";
 
@@ -264,6 +266,222 @@ export async function deleteCredential(db: D1Database, id: string): Promise<void
 }
 
 // ============================================================================
+// Capture（流量录制）
+// ============================================================================
+
+export async function getCaptureSessions(
+  db: D1Database,
+  userId: string,
+): Promise<CaptureSession[]> {
+  const result = await db
+    .prepare("SELECT * FROM capture_sessions WHERE user_id = ? ORDER BY created_at DESC")
+    .bind(userId)
+    .all<CaptureSession>();
+  return result.results;
+}
+
+export async function getCaptureSessionByHash(
+  db: D1Database,
+  hash: string,
+): Promise<CaptureSession | null> {
+  const row = await db
+    .prepare("SELECT * FROM capture_sessions WHERE hash = ? AND enabled = 1")
+    .bind(hash)
+    .first<CaptureSession>();
+  return row ?? null;
+}
+
+export async function getCaptureSessionById(
+  db: D1Database,
+  id: string,
+): Promise<CaptureSession | null> {
+  const row = await db
+    .prepare("SELECT * FROM capture_sessions WHERE id = ?")
+    .bind(id)
+    .first<CaptureSession>();
+  return row ?? null;
+}
+
+export async function createCaptureSession(
+  db: D1Database,
+  userId: string,
+  name: string,
+  hash: string,
+  mode: string,
+  targetUpstream: string | null,
+  targetAuth: string | null,
+  customStatus: number | null,
+  customBody: string | null,
+  customHeaders: string | null,
+): Promise<CaptureSession> {
+  const id = uuid();
+  await db
+    .prepare(
+      `INSERT INTO capture_sessions (id, user_id, name, hash, mode, target_upstream, target_auth, custom_status, custom_body, custom_headers)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      id,
+      userId,
+      name,
+      hash,
+      mode,
+      targetUpstream,
+      targetAuth,
+      customStatus,
+      customBody,
+      customHeaders,
+    )
+    .run();
+  return (await getCaptureSessionById(db, id))!;
+}
+
+export async function updateCaptureSession(
+  db: D1Database,
+  id: string,
+  fields: Partial<
+    Pick<
+      CaptureSession,
+      | "name"
+      | "mode"
+      | "target_upstream"
+      | "target_auth"
+      | "custom_status"
+      | "custom_body"
+      | "custom_headers"
+      | "enabled"
+    >
+  >,
+): Promise<void> {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (v !== undefined) {
+      sets.push(`${k} = ?`);
+      values.push(v);
+    }
+  }
+  if (sets.length === 0) return;
+  sets.push("updated_at = datetime('now')");
+  values.push(id);
+  await db
+    .prepare(`UPDATE capture_sessions SET ${sets.join(", ")} WHERE id = ?`)
+    .bind(...values)
+    .run();
+}
+
+export async function deleteCaptureSession(db: D1Database, id: string): Promise<void> {
+  await db.prepare("DELETE FROM capture_sessions WHERE id = ?").bind(id).run();
+}
+
+export async function getCaptureLogs(
+  db: D1Database,
+  sessionId: string,
+  limit = 200,
+  offset = 0,
+): Promise<CaptureLog[]> {
+  const result = await db
+    .prepare(
+      "SELECT * FROM capture_logs WHERE session_id = ? ORDER BY seq DESC LIMIT ? OFFSET ?",
+    )
+    .bind(sessionId, limit, offset)
+    .all<CaptureLog>();
+  return result.results;
+}
+
+export async function getCaptureLogCount(db: D1Database, sessionId: string): Promise<number> {
+  const row = await db
+    .prepare("SELECT COUNT(*) as c FROM capture_logs WHERE session_id = ?")
+    .bind(sessionId)
+    .first<{ c: number }>();
+  return row?.c ?? 0;
+}
+
+export async function insertCaptureLog(
+  db: D1Database,
+  sessionId: string,
+  seq: number,
+  method: string,
+  path: string,
+  headers: string | null,
+  body: string | null,
+  respStatus: number | null,
+  respHeaders: string | null,
+  respBody: string | null,
+  clientIp: string | null,
+  clientUa: string | null,
+): Promise<void> {
+  const id = uuid();
+  await db
+    .prepare(
+      `INSERT INTO capture_logs (id, session_id, seq, method, path, headers, body, resp_status, resp_headers, resp_body, client_ip, client_ua)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      id,
+      sessionId,
+      seq,
+      method,
+      path,
+      headers,
+      body,
+      respStatus,
+      respHeaders,
+      respBody,
+      clientIp,
+      clientUa,
+    )
+    .run();
+}
+
+/**
+ * 录制日志大小保护：统一截断到上限（与 D1 行大小 / UI 展示需求匹配）。
+ * - body / resp_body：64KB（响应体已在此前层截断，这里兜底）
+ * - headers / resp_headers：8KB
+ */
+export const CAPTURE_BODY_LIMIT = 64 * 1024;
+export const CAPTURE_HEADERS_LIMIT = 8 * 1024;
+
+export function truncateCaptureField(
+  value: string | null,
+  limit: number = CAPTURE_BODY_LIMIT,
+): string | null {
+  if (!value) return value;
+  return value.length > limit ? value.slice(0, limit) + "…(truncated)" : value;
+}
+
+/** 每个录制会话最多保留的日志条数（超出删最老，防止会话无限增长打爆 D1） */
+export const CAPTURE_SESSION_MAX_LOGS = 1000;
+
+/** 超限时删除该会话最老的日志（分批，最多删 200 条/次） */
+export async function trimCaptureLogs(db: D1Database, sessionId: string): Promise<void> {
+  const row = await db
+    .prepare("SELECT COUNT(*) as c FROM capture_logs WHERE session_id = ?")
+    .bind(sessionId)
+    .first<{ c: number }>();
+  const count = row?.c ?? 0;
+  if (count <= CAPTURE_SESSION_MAX_LOGS) return;
+  const excess = count - CAPTURE_SESSION_MAX_LOGS;
+  const deleteN = Math.min(excess, 200);
+  await db
+    .prepare(
+      `DELETE FROM capture_logs WHERE id IN (
+         SELECT id FROM capture_logs WHERE session_id = ? ORDER BY seq ASC LIMIT ?
+       )`,
+    )
+    .bind(sessionId, deleteN)
+    .run();
+}
+
+export async function getNextCaptureSeq(db: D1Database, sessionId: string): Promise<number> {
+  const row = await db
+    .prepare("SELECT MAX(seq) as m FROM capture_logs WHERE session_id = ?")
+    .bind(sessionId)
+    .first<{ m: number | null }>();
+  return (row?.m ?? 0) + 1;
+}
+
+// ============================================================================
 // Limits
 // ============================================================================
 
@@ -360,6 +578,12 @@ export async function logAudit(
     detail?: string | null;
   } = {},
 ): Promise<void> {
+  // detail 长度保护：审计只存摘要，防大块数据打爆 D1
+  const MAX_DETAIL = 2048;
+  let detail = opts.detail ?? null;
+  if (detail && detail.length > MAX_DETAIL) {
+    detail = detail.slice(0, MAX_DETAIL) + "…(truncated)";
+  }
   await db
     .prepare(`
     INSERT INTO audit_logs (id, actor_id, actor_ip, actor_ua, event, target_type, target_id, detail)
@@ -373,7 +597,7 @@ export async function logAudit(
       event,
       opts.targetType ?? null,
       opts.targetId ?? null,
-      opts.detail ?? null,
+      detail,
     )
     .run();
 }
@@ -526,6 +750,8 @@ const EVENT_LABEL_TO_NAME: Record<string, string> = {
   创建邀请: "invite_created",
   代理请求: "proxy_pull",
   爆破封禁: "brute_blocked",
+  调试请求: "debug_fetch",
+  录制请求: "capture_request",
 };
 
 /** 根据用户输入的搜索词，反查可能匹配的事件列表 */

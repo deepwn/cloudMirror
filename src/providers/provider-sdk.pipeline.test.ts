@@ -202,7 +202,7 @@ describe("proxy pipeline (SDK v2)", () => {
     expect(regHeaders.get("Host")).toBe("registry-1.docker.io");
   });
 
-  it("docker: 401 响应重写 WWW-Authenticate realm 指向 mirror", async () => {
+  it("docker: 401 响应重写 WWW-Authenticate realm 指向 mirror 并带 X-Cf-Debug-Auth", async () => {
     const docker = getProvider("docker")!;
     const fetchMock = vi.fn(
       async () =>
@@ -230,6 +230,37 @@ describe("proxy pipeline (SDK v2)", () => {
     const wa = res.headers.get("WWW-Authenticate") ?? "";
     expect(wa).toContain('realm="https://abc123.mirror.example.com/token"');
     expect(wa).not.toContain("auth.docker.io");
+    // 诊断头：pat=no（无 PAT），client=none（客户端未带 token）
+    const dbg = res.headers.get("X-Cf-Debug-Auth") ?? "";
+    expect(dbg).toContain("pat=no");
+    expect(dbg).toContain("final=none");
+  });
+
+  it("docker: 401 响应携带 PAT 交换成功诊断（X-Cf-Debug-Auth）", async () => {
+    const docker = getProvider("docker")!;
+    const fetchMock = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
+      if (String(input).startsWith("https://auth.docker.io/token")) {
+        return jsonResponse({ token: "exchanged-token" });
+      }
+      return new Response(JSON.stringify({ errors: [] }), { status: 401 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://abc123.mirror.example.com/v2/library/nginx/manifests/latest", {
+      headers: { "User-Agent": "docker/27.0.0", Authorization: "Bearer client-token" },
+    });
+    const res = await docker.handleProxy(req, {
+      userId: "u",
+      providerType: "docker",
+      pat: "dckr_pat_xxx",
+      patUsername: "evil7",
+    });
+    expect(res.status).toBe(401);
+    const dbg = res.headers.get("X-Cf-Debug-Auth") ?? "";
+    expect(dbg).toContain("pat=yes");
+    expect(dbg).toContain("client=Bearer"); // client Authorization scheme 是大写 Bearer
+    expect(dbg).toContain("auth=exchange");
+    expect(dbg).toContain("final=server");
   });
 
   it("docker: /token 请求透传到 auth.docker.io 并注入 Basic PAT", async () => {
@@ -258,6 +289,29 @@ describe("proxy pipeline (SDK v2)", () => {
     const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Headers;
     expect(headers.get("Host")).toBe("auth.docker.io");
     expect(headers.get("Authorization")).toBe(`Basic ${btoa("evil7:dckr_pat_xxx")}`);
+  });
+
+  it("docker: /token scope 单段镜像名补全 library/", async () => {
+    const docker = getProvider("docker")!;
+    const fetchMock = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit) =>
+        jsonResponse({ token: "client-token" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request(
+      "https://abc123.mirror.example.com/token?service=registry.docker.io&scope=repository:neo4j:pull",
+      { headers: { "User-Agent": "docker/27.0.0" } },
+    );
+    await docker.handleProxy(req, {
+      userId: "u",
+      providerType: "docker",
+      pat: null,
+      patUsername: null,
+    });
+
+    const target = String(fetchMock.mock.calls[0][0]);
+    expect(decodeURIComponent(target)).toContain("scope=repository:library/neo4j:pull");
   });
 
   it("docker: token 交换失败时保留客户端 Authorization 作 fallback", async () => {
