@@ -43,7 +43,9 @@ export class CranProvider extends ProviderDefinition {
     // crandb /-/desc 的 q 参数是 CouchDB startkey，会返回所有包而非仅匹配的。
     // 必须客户端侧过滤匹配关键词的包。
     const q = encodeURIComponent(query);
-    const res = await fetch(`https://crandb.r-pkg.org/-/desc?q=${q}`);
+    const res = await fetch(`https://crandb.r-pkg.org/-/desc?q=${q}`, {
+      headers: { "User-Agent": "CloudMirror/4.0", Accept: "application/json" },
+    });
     if (!res.ok) return null;
 
     const rawObj = (await res.json()) as Record<string, unknown>;

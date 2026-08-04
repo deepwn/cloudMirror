@@ -16,6 +16,8 @@ user-invocable: true
 - 开发 Worker 后端（API 端点 / D1 / 鉴权 / 限流 / CRON）
 - 开发 React + shadcn/ui 前端页面
 - 编写/运行测试，执行部署或数据库迁移
+- 使用调试工具（Postman 调试 / 流量录制）诊断 CLI 代理问题
+- 排查 Docker 拉取 401/TLS 握手失败等常见问题
 
 ## 项目速览
 
@@ -33,10 +35,11 @@ example.wrangler.toml # 部署配置模板
 **关键架构约束**（详见 docs/architecture.md）：
 
 1. **三态路由，子域优先**：`worker/index.ts` 判定顺序为 子域代理 → `/cloudmirror-api/*` 平台 API → SPA。子域上的上游路径（如 cargo `/api/v1/`）不得被平台 API 分支拦截。
-2. **平台 API 前缀**：一律用 `platformApi()`（`src/shared/api.ts`）派生，禁止硬编码 `/api/v1`。
-3. **base = 纯执行管线，provider = 纯声明单元**：禁止向 `_base.ts` 添加跨源知识。
-4. **SSRF**：所有端点必须 `https://` 且 host 非内网/IP（`validateContract()` 强制）。
-5. **详情服务端一站式**：前端 `StaticTabRenderer` 纯渲染，禁止浏览器直连上游。
+2. **子域格式**：仅 `{hash}.mirror.example.com`（一级，hash=16 位 hex，不含点）。CF Universal SSL 仅覆盖一级通配符，多级子域（`hash.docker.mirror.example.com`）TLS 握手失败。
+3. **平台 API 前缀**：一律用 `platformApi()`（`src/shared/api.ts`）派生，禁止硬编码 `/api/v1`。
+4. **base = 纯执行管线，provider = 纯声明单元**：禁止向 `_base.ts` 添加跨源知识。Capture 录制为平台调试工具，**不注册为 Provider**（不在上游管理页展示）。
+5. **SSRF**：所有端点必须 `https://` 且 host 非内网/IP（`validateContract()` 强制）。
+6. **详情服务端一站式**：前端 `StaticTabRenderer` 纯渲染，禁止浏览器直连上游。
 
 ## 新增一个 Provider（标准流程）
 
@@ -166,7 +169,32 @@ case path.startsWith("/foo"):
 
 - 代理请求门控（写操作开关/限流/UA/IP 黑白名单）在 `worker/index.ts` handleProxyRequest
 - PAT 加密解密：`src/worker/crypto.ts`（AES-256-GCM）
-- CRON：`src/worker/cron.ts`（health-check / aggregate-usage / daily-maintenance，上限 3 个）
+- CRON：`src/worker/cron.ts`（cleanup-logs / cleanup-audit / cleanup-capture / daily-cleanup / expire-limits，上限 5 个）
+
+### 调试与诊断工具
+
+**Postman 调试**（设置 → 调试工具 → Postman 调试）：
+- 端点 `POST /cloudmirror-api/v1/debug-fetch`（admin-only）
+- 从 Worker 侧发起 HTTP 请求并返回完整响应（≤ 256KB 截断，15s 超时）
+- SSRF 防护：禁止 IPv6/10.x/172.16-31/192.168/169.254/metadata 目标
+- 用途：验证上游可达性、诊断 PAT 注入 / realm 重写 / 鉴权链路
+
+**流量录制**（设置 → 调试工具 → 流量录制）：
+- 创建录制会话 → 自动分配子域 hash → CLI 打到该子域的所有请求被录制
+- 模式：`echo`（回显）/ `challenge`（挑战握手）/ `custom`（固定响应）/ `transparent`（透明代理+录制）
+- `transparent` 模式：真实转发到上游并录制完整请求/响应（body ≤ 64KB，headers ≤ 8KB）
+- 每会话上限 1000 条日志，支持 JSONL 导出
+- 用途：构造未知 CLI 流程的 Provider 时抓取真实流量
+
+### 日志分层（详见 docs/logging.md）
+
+| 层 | 表 | 内容 | 大小保护 |
+|---|---|---|---|
+| 审计摘要 | `audit_logs` | 操作事件（event=proxy_pull/debug_fetch/capture_request…） | detail ≤ 2KB |
+| 用量统计 | `usage_logs` | 每请求 provider/path/status/字节（dashboard 图表） | 行内小字段 |
+| 调试详情 | `capture_logs` | 录制会话的请求/响应体 | body ≤ 64KB，每会话 ≤ 1000 条 |
+
+核心原则：**调试详情不进审计**——debug-fetch 响应体、capture 请求/响应体仅存 capture_logs，审计只记摘要。
 
 ## 前端开发
 
@@ -182,7 +210,7 @@ case path.startsWith("/foo"):
 ```bash
 yarn typecheck          # TS strict
 yarn lint               # oxlint（或直接 oxlint）
-yarn test               # 全量 vitest（138 项）
+yarn test               # 全量 vitest（160 项）
 yarn vitest run src/providers   # SDK 专项：baseline + pipeline + utils（58 项）
 yarn build              # 前端生产构建
 ```
@@ -202,3 +230,13 @@ wrangler d1 export cloudmirror-db --remote --output backup.sql   # 备份
 - 子域：`{hash}.mirror.example.com`，DNS 需 `*.mirror.example.com CNAME mirror.example.com`
 - 密钥：`wrangler secret put JWT_SECRET` / `ENCRYPTION_KEY`（64 位 hex）
 - 配置模板：`example.wrangler.toml` / `.dev.vars.example`
+
+## Docker 排障速查
+
+| 症状 | 根因 | 解决 |
+|---|---|---|
+| `tls: handshake failure` | 多级子域（`hash.docker.mirror.example.com`），CF Universal SSL 仅覆盖一级通配符 | 使用一级子域 `{hash}.mirror.example.com`，或 CF Dashboard → SSL/TLS → Edge Certificates → 启用 Total TLS |
+| `401 Unauthorized` | PAT 未配置或未命中（credentials 表 / user_providers.pat） | 检查 `X-Cf-Debug-Auth` 响应头（pat=yes/no, auth=…）；PAT 优先级：user_providers.pat → credentials → fallback_pat |
+| `429 Too Many Requests` | Docker Hub 匿名速率限制（100 req/hr per IP） | 配置 PAT 后 `docker-ratelimit-source` 变为用户名，限额升至 200+ |
+| `connection reset by peer` → cloudfront.docker.com | blob 直连 Docker CDN 偶发网络抖动（非 mirror 问题） | docker 自动重试 3 次，WARN 可忽略 |
+| `/token` 返回 404 | realm 未重写为镜像域，docker CLI 去 auth.docker.io 取 token 未带 PAT | `onSend` 中 `WWW-Authenticate` realm 必须替换为镜像 host |

@@ -24,7 +24,7 @@ export class HuggingFaceProvider extends ProviderDefinition {
     name: "Hugging Face",
     label: "Hugging Face",
     icon: { kind: "simple-icons", name: "siHuggingface", colored: true },
-    description: "AI 模型与数据集加速下载，含 Git LFS 大文件支持",
+    description: "AI 模型与数据集代理加速（Git LFS 协议穿透）",
     searchEnabled: true,
     searchLabel: "搜索模型/数据集...",
     searchHint: "hf download user/model --endpoint https://{hash}.mirror.example.com",
@@ -44,7 +44,10 @@ export class HuggingFaceProvider extends ProviderDefinition {
     pageSize: number,
     pat?: string,
   ): Promise<GenericSearchResponse | null> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      "User-Agent": "CloudMirror/4.0",
+      Accept: "application/json",
+    };
     if (pat) headers["Authorization"] = `Bearer ${pat}`;
 
     const [modelsRes, datasetsRes] = await Promise.allSettled([

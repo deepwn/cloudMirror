@@ -12,35 +12,7 @@ export const DOCKER_HUB_REGISTRY = "registry-1.docker.io";
 export const DOCKER_HUB_INDEX = "index.docker.io";
 export const DOCKER_AUTH_URL = "https://auth.docker.io";
 
-// ---------- Registry → Auth Server ----------
-
-export const REGISTRY_AUTH_MAP: Record<string, string> = {
-  "registry-1.docker.io": DOCKER_AUTH_URL,
-  "docker.io": DOCKER_AUTH_URL,
-  "index.docker.io": DOCKER_AUTH_URL,
-  "quay.io": "https://quay.io",
-  "gcr.io": "https://gcr.io",
-  "k8s.gcr.io": "https://k8s.gcr.io",
-  "registry.k8s.io": "https://registry.k8s.io",
-  "ghcr.io": "https://ghcr.io",
-  "docker.cloudsmith.io": "https://docker.cloudsmith.io",
-  "nvcr.io": "https://nvcr.io",
-};
-
-// ---------- 旧版路由映射 (兼容 v2.x hostTop → upstream) ----------
-
-export const ROUTE_MAP: Record<string, string> = {
-  quay: "quay.io",
-  gcr: "gcr.io",
-  "k8s-gcr": "k8s.gcr.io",
-  k8s: "registry.k8s.io",
-  ghcr: "ghcr.io",
-  cloudsmith: "docker.cloudsmith.io",
-  nvcr: "nvcr.io",
-  test: "registry-1.docker.io",
-};
-
-// ---------- 速率限制 ----------
+// ---------- Preflight ----------
 
 export const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 分钟窗口
 export const DEFAULT_MAX_REQ_PER_MIN = 600;
@@ -124,33 +96,6 @@ export function safeUrl(urlStr: string, base?: string): URL | null {
   } catch (e) {
     console.error("safeUrl error:", (e as Error).message);
     return null;
-  }
-}
-
-/** 获取 registry 的 auth server URL */
-export function getAuthUrl(registryHost: string): string | null {
-  return REGISTRY_AUTH_MAP[registryHost] ?? null;
-}
-
-/** 获取 registry token service 标识 */
-export function getTokenService(registryHost: string): string {
-  switch (registryHost) {
-    case "registry-1.docker.io":
-    case "docker.io":
-    case "index.docker.io":
-      return "registry.docker.io";
-    case "ghcr.io":
-      return "ghcr.io";
-    case "gcr.io":
-      return "gcr.io";
-    case "quay.io":
-      return "quay.io";
-    case "registry.k8s.io":
-      return "registry.k8s.io";
-    case "nvcr.io":
-      return "nvcr.io";
-    default:
-      return registryHost;
   }
 }
 

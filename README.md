@@ -20,6 +20,7 @@
 | 🔌 **Provider SDK v2** | 声明式 `proxy` / `search` 配置 + 分阶段 hooks，新增源仅需 1 个文件 + 1 行注册                           |
 | 📄 **自动文档**        | DocsManager 从 Provider 声明自动派生端点表 / 搜索 API / 凭据 / 快速连接                                 |
 | 🛡️ **安全基线**        | SSRF 白名单派生校验、hook 异常降级、审计日志、限流、UA/IP 黑名单                                        |
+| 🔧 **调试工具**        | Postman 式 debug-fetch（Worker 侧 HTTP 诊断）+ 流量录制（透明代理抓取 CLI 请求链路，用于构造未知 Provider） |
 
 ## 📦 内置源（14 个）
 

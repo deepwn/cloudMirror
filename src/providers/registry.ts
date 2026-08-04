@@ -7,7 +7,6 @@
 
 import { manager } from "./manager";
 import { dockerProvider } from "./docker.provider";
-import { captureProvider } from "./capture.provider";
 import { githubProvider } from "./github.provider";
 import { huggingfaceProvider } from "./huggingface.provider";
 import { npmProvider } from "./npm.provider";
@@ -29,7 +28,6 @@ manager
   .clear()
   .register(githubProvider)
   .register(dockerProvider)
-  .register(captureProvider)
   .register(huggingfaceProvider)
   .register(npmProvider)
   .register(pypiProvider)

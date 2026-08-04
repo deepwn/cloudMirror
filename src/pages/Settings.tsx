@@ -291,7 +291,7 @@ export default function Settings() {
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  Postman 调试
+                  请求调试
                 </button>
                 <button
                   type="button"

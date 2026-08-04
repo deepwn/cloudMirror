@@ -523,11 +523,6 @@ export class DockerHubProvider extends ProviderDefinition {
   defineCredentialTypes() {
     return [
       { value: "docker", label: "docker", authMode: "basic" as const },
-      { value: "ghcr", label: "ghcr", authMode: "bearer" as const },
-      { value: "gcr", label: "gcr", authMode: "basic" as const },
-      { value: "quay", label: "quay", authMode: "basic" as const },
-      { value: "k8s", label: "k8s", authMode: "basic" as const },
-      { value: "nvcr", label: "nvcr", authMode: "basic" as const },
     ];
   }
 

@@ -48,7 +48,9 @@ export class DartProvider extends ProviderDefinition {
     url.searchParams.set("q", query);
     url.searchParams.set("page", String(page));
 
-    const res = await fetch(url.toString());
+    const res = await fetch(url.toString(), {
+      headers: { "User-Agent": "CloudMirror/4.0", Accept: "application/json" },
+    });
     if (!res.ok) return null;
     const data = (await res.json()) as { packages?: { package?: string }[]; next?: string | null };
 
@@ -68,7 +70,9 @@ export class DartProvider extends ProviderDefinition {
     }[] = await Promise.all(
       rawNames.map(async (name) => {
         try {
-          const dRes = await fetch(`https://pub.dev/api/packages/${encodeURIComponent(name)}`);
+          const dRes = await fetch(`https://pub.dev/api/packages/${encodeURIComponent(name)}`, {
+            headers: { "User-Agent": "CloudMirror/4.0", Accept: "application/json" },
+          });
           if (dRes.ok) {
             const d = (await dRes.json()) as Record<string, unknown>;
             const latest = (d.latest as Record<string, unknown>) ?? {};

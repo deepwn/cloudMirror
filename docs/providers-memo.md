@@ -2,7 +2,7 @@
 
 > 定位：**运维/排障参考** — 逐 Provider 记录代理管线、搜索接口、PAT 验证流程与已知缺陷。
 > 权威架构见 [architecture.md](./architecture.md)，代码规范见 [development.md](./development.md)。
-> 最后更新：2026-08-03（Docker 401 排查 + GitHub 参考实现比对 + 调试工具上线）
+> 最后更新：2026-08-04（日志分层规范落地 + Docker TLS 子域排查 + Capture 脱离 Provider 注册表）
 
 ---
 
@@ -51,7 +51,7 @@
 | K8s | `registry.k8s.io` | `https://registry.k8s.io/v2/token` 等 | Bearer/Basic 视组件 |
 | NVCR | `nvcr.io` | `https://auth.nvcr.io/token?service=nvcr.io&scope=...` | Basic `$oauthtoken:PAT` |
 
-⚠️ 现有 `src/worker/config.ts` 的 `REGISTRY_AUTH_MAP` 只声明了映射，`docker.provider.ts` 的 token 交换**只硬编码了 Docker Hub 的 `auth.docker.io`**，且 scope 写死 `pull`。**ghcr/gcr/quay/k8s/nvcr 并未接入任何代理路径或 token 交换逻辑** —— 它们只是 `defineCredentialTypes()` 里的声明，实际请求会直接打到对应 registry（未实现）。
+⚠️ ~~现有 `src/worker/config.ts` 的 `REGISTRY_AUTH_MAP` 只声明了映射~~ （已清理：`REGISTRY_AUTH_MAP`/`ROUTE_MAP`/`getAuthUrl`/`getTokenService`/`fetchWithTimeout` 全部删除）。**ghcr/gcr/quay/k8s/nvcr 未接入任何代理路径或 token 交换逻辑**，它们只是 `defineCredentialTypes()` 里的声明——已于 2026-08-04 清理为仅保留 `docker` 一种凭据类型。未来多 registry 应建独立 Provider 文件。
 
 ### 2.3 Docker Hub 完整 token 流（对比参考实现）
 
@@ -238,7 +238,8 @@ mirror → 客户端: 401 + WWW-Authenticate（⚠️ realm 是否被重写是�
 1. 客户端 token 流程必须走 mirror（realm 重写），否则 PAT 失效；
 2. `/v2/` 的 401 挑战是协议正常行为，关键是让挑战"指向自己"；
 3. Docker Hub 镜像名 `library/` 补全必须做，否则单段镜像名 401/404；
-4. blob CDN 307 需手动处理，否则客户端拿到的是上游 CDN 地址。
+4. blob CDN 307 不重写：Docker Hub blob 下载 307 → `production.cloudfront.docker.com`（签名 URL），**刻意不重写 Location**（二进制走官方 CDN 更快、不烧 Worker 流量）。docker CLI 自动跟随直连 CDN；偶发 `connection reset by peer` → 自动重试 WARN，属正常。
+5. **子域必须是一级**：`{hash}.mirror.example.com`。CF Universal SSL 仅覆盖一级通配符；`{hash}.docker.mirror.example.com`（多级）→ TLS 握手失败（`ERR_SSL_VERSION_OR_CIPHER_MISMATCH`）。
 
 ---
 
@@ -246,14 +247,14 @@ mirror → 客户端: 401 + WWW-Authenticate（⚠️ realm 是否被重写是�
 
 | # | 严重度 | 问题 | 影响 | 位置 |
 |---|---|---|---|---|
-| 1 | 🔴 高 | `credentials` 表未接入 CLI 代理链路（`authenticateCli` 未被调用） | 用户配的"访问凭据"对 docker pull / git clone 完全无效 → 私有源 401 | `worker/index.ts` + `worker/router.ts` |
-| 2 | 🔴 高 | docker `WWW-Authenticate` realm 未重写 | 客户端 token 请求绕过 mirror，PAT 失效 | `docker.provider.ts` `onSend` |
-| 3 | 🔴 高 | docker token 交换失败时无条件删除客户端 Authorization | 无 fallback → 401 | `docker.provider.ts` `onBuildRequest` |
-| 4 | 🟠 中 | docker `/v2/` 单段镜像名未补 `library/` | `nginx` 形式 pull 在非 Docker CLI 客户端（skopeo/podman）可能 401/404 | `docker.provider.ts` |
-| 5 | 🟠 中 | ghcr/gcr/quay/k8s/nvcr 仅有凭据类型声明，无代理/token 交换实现 | 这些"凭据"实际不生效 | `docker.provider.ts` `defineCredentialTypes` + `config.ts` |
-| 6 | 🟡 低 | hf "LFS 支持" 仅为文案，无 LFS 逻辑 | 大文件下载体验与描述不符 | `huggingface.provider.ts` |
-| 7 | 🟡 低 | cran 搜索 fetch 未带 UA/头；npm 无 UA 伪装 | 上游风控误伤风险 | `cran.provider.ts` / `npm.provider.ts` |
-| 8 | 🟡 低 | docker token 交换无缓存、scope 无 `offline_token` | auth.docker.io 调用频繁、多请求重复交换 | `docker.provider.ts` |
+| 1 | ✅ 已修复 | `credentials` 表未接入 CLI 代理链路 | 用户配的"访问凭据"无效 → 已修复：`resolveRoute` 从 credentials 表随机轮询 | `worker/router.ts` |
+| 2 | ✅ 已修复 | docker `WWW-Authenticate` realm 未重写 | 客户端 token 请求绕过 mirror → 已修复：`onSend` 重写 realm | `docker.provider.ts` |
+| 3 | ✅ 已修复 | docker token 交换失败时无条件删除客户端 Authorization | 无 fallback → 已修复：保留 clientAuth 作 fallback | `docker.provider.ts` |
+| 4 | ✅ 已修复 | docker `/v2/` 单段镜像名未补 `library/` | 已修复：路径 + scope 自动补全 | `docker.provider.ts` |
+| 5 | ✅ 已清理 | ghcr/gcr/quay/k8s/nvcr 死声明已删除 | `defineCredentialTypes` 仅保留 docker；`config.ts` 清除 `REGISTRY_AUTH_MAP`/`ROUTE_MAP`/`getAuthUrl`/`getTokenService`/`fetchWithTimeout` | `docker.provider.ts` + `config.ts` |
+| 6 | ✅ 已修正 | hf "含 Git LFS 大文件支持" 措辞修正 | 改为"AI 模型与数据集代理加速（Git LFS 协议穿透）"，如实描述 | `huggingface.provider.ts` |
+| 7 | ✅ 已修复 | cran/dart/hf 搜索 fetch 无 UA | 已补 `"User-Agent": "CloudMirror/4.0"` | `cran.provider.ts` / `dart.provider.ts` / `huggingface.provider.ts` |
+| 8 | ✅ 已修复 | docker token 交换无缓存、scope 无 `offline_token` | auth.docker.io 调用频繁 → 已修复：Cache API 按 repo+PAT 指纹缓存，TTL 5min | `docker.provider.ts` |
 
 ---
 

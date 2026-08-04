@@ -209,7 +209,7 @@ sequenceDiagram
 | -------------------- | ------------------------------- | --------------------------------------------------------------------- |
 | `ProviderDefinition` | `src/providers/_base.ts`        | 抽象基类：代理/搜索/详情默认管线 + render/validateContract/docs 聚合  |
 | `ProviderManager`    | `src/providers/manager.ts`      | 注册管理器：register/use/get/all/searchable/metas/onRegister/validate |
-| `registry.ts`        | `src/providers/registry.ts`     | 注册链（manager.register 14 个源）+ 兼容导出                          |
+| `registry.ts`        | `src/providers/registry.ts`     | 注册链（manager.register 14 个源）+ 兼容导出。Capture 录制为平台调试工具，不注册为 Provider |
 | `docs-manager.ts`    | `src/providers/docs-manager.ts` | 文档自动派生 + prose 合并                                             |
 | `shared/api.ts`      | `src/shared/api.ts`             | `PLATFORM_API_PREFIX` + `platformApi()` 单一事实源                    |
 | `shared/types.ts`    | `src/shared/types.ts`           | 全部契约类型（SDK v2 声明式配置 + RenderContract + Docs）             |
@@ -282,7 +282,20 @@ sequenceDiagram
 | render   | `provider-sdk.baseline.test.ts` | 契约完整性（itemsPath/detailLink/infoEndpoint/credentialTypes）      |
 | e2e      | `worker/__tests__/api/*`        | auth/credentials 集成（URL 为 `/cloudmirror-api/v1`）                |
 
-当前基线：`vitest run src/providers` **58 项全过**；全量 **138 项全过**（lint/typecheck/test/build 均绿）。
+当前基线：`vitest run src/providers` **58 项全过**；全量 **160 项全过**（lint/typecheck/test/build 均绿）。
+
+### 6.1 调试与诊断工具
+
+**Postman 调试**（`src/worker/api/debug.ts`）：
+- 端点 `POST /cloudmirror-api/v1/debug-fetch`（admin-only）
+- 从 Worker 侧发起 HTTP 请求并返回完整响应（≤ 256KB 截断，15s 超时）
+- SSRF 防护（禁止内网/IPv6），与 Provider fetch 白名单独立
+
+**流量录制**（`src/worker/api/capture.ts` + `src/worker/index.ts` `handleCaptureRequest`）：
+- 录制会话通过 capture API 创建，自动分配子域 hash
+- 子域请求到达 Worker → `getCaptureSessionByHash` 判定 → 不走 Provider 代理管线，直接录制
+- transparent 模式：真实代理到上游的同时录制请求/响应（构造未知 CLI 流程的 Provider 时使用）
+- 录制数据存 `capture_logs` 表（body ≤ 64KB，headers ≤ 8KB，每会话 ≤ 1000 条，cron 保留 30 天）
 
 ---
 

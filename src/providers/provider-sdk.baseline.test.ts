@@ -19,7 +19,6 @@ const expectedDisplayNames: Record<string, string> = {
   cpan: "Perl",
   dart: "Dart",
   cran: "R",
-  capture: "Capture",
 };
 
 const searchQueryByProvider: Record<string, string> = {
